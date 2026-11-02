@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- build:head -->
+<title>The Fed Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Set the federal funds rate each quarter and try to keep inflation and unemployment on target. A classroom monetary policy game built on the Cowen-Tabarrok AD-AS model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<!-- /build:head -->
+</head>
+<body>
+<!-- build:body -->
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 21 L12 15 L17 18 L26 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <h1 class="brand-name">The Fed Game</h1>
+        <p class="brand-sub">You chair the Fed for one four-year term.</p>
+      </div>
+    </div>
+    <div class="term" aria-live="polite">
+      <div class="term-label"><span id="termLabel">Year 1, Q1</span> <span class="term-left" id="termLeft">16 quarters left</span></div>
+      <ol class="pips" id="pips" aria-hidden="true"></ol>
+    </div>
+    <nav class="topnav" aria-label="Game menu">
+      <button type="button" class="btn ghost" id="btnHelp">How to play</button>
+      <button type="button" class="btn ghost" id="btnModel">The model</button>
+      <button type="button" class="btn ghost" id="btnSettings">Instructor</button>
+      <button type="button" class="btn ghost" id="btnNew">New game</button>
+    </nav>
+  </header>
+
+  <section class="news" aria-live="polite" aria-label="News">
+    <div class="news-inner">
+      <div class="news-meta"><span class="news-paper">The Economic Ledger</span><span id="newsDate">Year 1, Q1</span></div>
+      <p class="news-head" id="newsHead">Economy grows at a steady pace as new Fed chair takes office</p>
+      <p class="news-deck" id="newsDeck">Inflation is close to 2 percent and unemployment is near its natural rate. Markets wait for the new chair's first decision.</p>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="card chart-card" aria-labelledby="tsTitle">
+      <div class="card-head">
+        <h2 id="tsTitle">Inflation, unemployment and the federal funds rate</h2>
+        <ul class="legend" id="tsLegend">
+          <li><span class="key key-pi"></span>Inflation</li>
+          <li><span class="key key-u"></span>Unemployment</li>
+          <li><span class="key key-i"></span>Fed funds rate</li>
+          <li><span class="key key-goal"></span>Goals</li>
+        </ul>
+      </div>
+      <div class="chart" id="tsChart" role="img" aria-label="Line chart of inflation, unemployment and the federal funds rate by quarter"></div>
+      <p class="chart-note">Percent, annual rate. Shaded area is your term. Goals: inflation <b id="noteGoalPi">2%</b>, unemployment at its natural rate of <b id="noteGoalU">4.5%</b>.</p>
+    </section>
+
+    <aside class="side">
+      <section class="card decide" aria-labelledby="decideTitle">
+        <h2 id="decideTitle" class="eyebrow">Your decision for Year 1, Q1</h2>
+        <div class="rate-row">
+          <button type="button" class="rate-btn" id="btnCut" aria-label="Cut the rate by a quarter point">
+            <span aria-hidden="true">&minus;</span><small>Cut</small>
+          </button>
+          <div class="rate-readout">
+            <output id="rateOut" for="btnCut btnRaise" aria-live="polite">4.00%</output>
+            <span class="rate-sub" id="rateSub">Hold at current rate</span>
+          </div>
+          <button type="button" class="rate-btn" id="btnRaise" aria-label="Raise the rate by a quarter point">
+            <span aria-hidden="true">+</span><small>Raise</small>
+          </button>
+        </div>
+        <button type="button" class="btn primary go" id="btnGo">Set rate and run the quarter</button>
+        <p class="hint">Keys: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the rate, <kbd>Enter</kbd> runs the quarter.</p>
+      </section>
+
+      <section class="card stats" aria-labelledby="statsTitle">
+        <h2 id="statsTitle" class="eyebrow">Latest data, <span id="statsQ">Year 0, Q4</span></h2>
+        <dl class="tiles" id="tiles"></dl>
+        <div class="cred">
+          <div class="cred-top"><span>Fed credibility</span><b id="credVal">80%</b></div>
+          <div class="meter" aria-hidden="true"><span id="credBar"></span></div>
+          <p class="cred-note">How firmly people expect 2% inflation. It falls when inflation strays far from the goal.</p>
+        </div>
+      </section>
+    </aside>
+
+    <section class="card adas-card" aria-labelledby="adasTitle">
+      <div class="card-head">
+        <h2 id="adasTitle">The AD&ndash;AS model this quarter</h2>
+        <ul class="legend">
+          <li><span class="key key-ad"></span>AD</li>
+          <li><span class="key key-sras"></span>SRAS</li>
+          <li><span class="key key-lras"></span>LRAS</li>
+          <li><span class="key key-ghost"></span>Last quarter</li>
+        </ul>
+      </div>
+      <div class="adas-wrap">
+        <div class="chart" id="adasChart" role="img" aria-label="Aggregate demand and supply diagram, inflation against real GDP growth"></div>
+        <div class="adas-explain">
+          <dl class="curves" id="curves"></dl>
+          <p class="shift-note" id="shiftNote">The economy starts close to the goal point, where AD crosses LRAS at 2% inflation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card table-card" aria-labelledby="tableTitle">
+      <details id="tableDetails">
+        <summary><h2 id="tableTitle">Data table</h2><span class="summary-hint">Every quarter, for note-taking</span></summary>
+        <div class="table-scroll">
+          <table class="data" id="dataTable">
+            <thead><tr><th scope="col">Quarter</th><th scope="col">Fed funds</th><th scope="col">Inflation</th><th scope="col">Unemployment</th><th scope="col">Real GDP growth</th><th scope="col">Expected inflation</th><th scope="col">Real rate</th><th scope="col">Spending growth</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-actions">
+          <button type="button" class="btn ghost" id="btnCopy">Copy table</button>
+          <button type="button" class="btn ghost" id="btnCsv">Download CSV</button>
+          <span class="copy-msg" id="copyMsg" role="status"></span>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>An independent teaching tool, not affiliated with the Federal Reserve. The model follows the dynamic AD&ndash;AS framework in Cowen &amp; Tabarrok, <i>Modern Principles of Economics</i>, chapters 13, 15 and 16 (macro 32, 34, 35).</p>
+  </footer>
+</div>
+
+<!-- Dialogs -->
+<dialog class="dlg" id="dlgHelp" aria-labelledby="helpTitle">
+  <form method="dialog" class="dlg-body">
+    <p class="eyebrow">Briefing for the new chair</p>
+    <h2 id="helpTitle">Keep inflation near 2% and unemployment near its natural rate</h2>
+    <div class="help-grid">
+      <div>
+        <h3>Your tool</h3>
+        <p>Each quarter you set the <b>federal funds rate</b>, the overnight rate banks charge each other. The Fed hits it with open market operations. Lower rates speed up money and spending growth (<i>M&#771;</i> + <i>v&#771;</i>) and shift aggregate demand right. Higher rates shift it left.</p>
+      </div>
+      <div>
+        <h3>Your goals</h3>
+        <p>Inflation of <b class="goalPi">2%</b> and unemployment at its natural rate of <b class="goalU">4.5%</b>. Your term is 16 quarters. At the end, the President decides whether to reappoint you based on how close you stayed to both goals.</p>
+      </div>
+      <div>
+        <h3>The catch</h3>
+        <p>Rate changes take a few quarters to work through spending. Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
+      </div>
+      <div>
+        <h3>Real rates matter</h3>
+        <p>Spending responds to the <b>real</b> rate: the funds rate minus expected inflation. If inflation expectations rise and you leave the funds rate alone, policy gets looser. The neutral funds rate is about <b class="neutralI">4%</b> when expected inflation is 2%.</p>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn primary" value="start" id="btnStart">Take office</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-wide" id="dlgModel" aria-labelledby="modelTitle">
+  <form method="dialog" class="dlg-body">
+    <p class="eyebrow">Under the hood</p>
+    <h2 id="modelTitle">A quarterly version of the Cowen&ndash;Tabarrok AD&ndash;AS model</h2>
+    <p class="lede">The game uses the dynamic AD&ndash;AS diagram from <i>Modern Principles</i>: real GDP growth on the horizontal axis, inflation on the vertical. All rates are percent per year.</p>
+    <div class="eq-list">
+      <div class="eq"><span class="eq-name">Aggregate demand</span><code>&pi; + g = S</code><p>Spending growth <i>S</i> = <i>M&#771;</i> + <i>v&#771;</i> must be split between inflation &pi; and real growth <i>g</i>. AD is a line with slope &minus;1.</p></div>
+      <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
+      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;)&middot;m<sub>&minus;1</sub> + &omega;&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually. About half of a rate change bites in the first quarter.</p></div>
+      <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
+      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
+      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
+      <div class="eq"><span class="eq-name">Okun's law</span><code>&Delta;u = &minus;&beta;&middot;(g &minus; g&#772; &minus; &theta;&middot;z) / 4</code><p>Unemployment rises when growth falls short of its normal pace. Part of a real shock changes output per worker rather than jobs.</p></div>
+    </div>
+    <h3>Parameters</h3>
+    <div class="table-scroll"><table class="data params" id="paramTable"><tbody></tbody></table></div>
+    <p class="small">A longer write-up with classroom notes is in <code>docs/MODEL.md</code> in the project repository.</p>
+    <div class="dlg-actions"><button class="btn primary" value="close">Close</button></div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="dlgSettings" aria-labelledby="settingsTitle">
+  <form method="dialog" class="dlg-body" id="settingsForm">
+    <p class="eyebrow">Instructor settings</p>
+    <h2 id="settingsTitle">Set up a game</h2>
+    <p class="small">Starting a game with these settings resets the current game. Use the same seed and shock to give a whole class the same economy.</p>
+    <div class="form-grid">
+      <label for="setScenario">Shock
+        <select id="setScenario"></select>
+      </label>
+      <label for="setOnset">Shock hits in quarter
+        <select id="setOnset"><option value="">Random (2&ndash;5)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>8</option></select>
+      </label>
+      <label for="setSeed">Seed (random numbers)
+        <input id="setSeed" type="number" min="1" step="1" placeholder="Random">
+      </label>
+      <label for="setQuarters">Term length (quarters)
+        <input id="setQuarters" type="number" min="8" max="40" step="1" value="16">
+      </label>
+      <label for="setUstar">Natural rate of unemployment (%)
+        <input id="setUstar" type="number" min="2" max="9" step="0.1" value="4.5">
+      </label>
+      <label for="setGbar">Solow growth rate (%)
+        <input id="setGbar" type="number" min="0" max="6" step="0.1" value="3">
+      </label>
+      <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
+      <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>
+    </div>
+    <p class="small" id="shareRow">To give students this exact setup, add this to the end of the game's web address: <code id="shareLink"></code></p>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" value="apply" id="btnApply">Start game with these settings</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-wide" id="dlgEnd" aria-labelledby="endTitle">
+  <form method="dialog" class="dlg-body">
+    <div class="verdict" id="verdict">
+      <div class="grade" id="endGrade">B</div>
+      <div>
+        <p class="eyebrow" id="endEyebrow">The President's decision</p>
+        <h2 id="endTitle">Reappointed</h2>
+        <p id="endSummary"></p>
+      </div>
+    </div>
+    <div class="shock-reveal">
+      <p class="eyebrow">The shock in your term</p>
+      <h3 id="shockName"></h3>
+      <p class="shock-kind" id="shockKind"></p>
+      <p id="shockBlurb"></p>
+      <p class="lesson" id="shockLesson"></p>
+    </div>
+    <h3>How other policies would have done with the same shocks</h3>
+    <div class="compare-legend">
+      <span><span class="key key-you"></span>Your policy</span>
+      <span><span class="key key-taylor"></span>Taylor rule</span>
+      <span><span class="key key-hold"></span>Never change the rate</span>
+    </div>
+    <div class="compare" id="compare"></div>
+    <div class="table-scroll"><table class="data score-table" id="scoreTable"></table></div>
+    <p class="small">Distance from goals is the root-mean-square gap of inflation and unemployment from their goals over your term. Under 1.3 points earns reappointment. The Taylor rule sets the funds rate at r* + &pi; + 0.5(&pi; &minus; 2) + 0.5&times;output gap, using the past year's inflation.</p>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="close">Look at the charts</button>
+      <button class="btn ghost" value="replay" id="btnReplay">Replay the same economy</button>
+      <button class="btn primary" value="new" id="btnAgain">Play a new game</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="tooltip" id="tooltip" role="presentation" hidden></div>
+
+<script src="js/model.js"></script>
+<script src="js/news.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<!-- /build:body -->
+</body>
+</html>

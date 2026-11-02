@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- build:head -->
+<title>The Fed Game</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Set the federal funds rate each quarter and try to keep inflation and unemployment on target. A classroom monetary policy game built on the Cowen-Tabarrok AD-AS model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&display=swap">
+<style>
+/* Layout: a policy-room console. Wide chart + decision rail on the right,
+   the AD-AS diagram underneath, a newspaper band across the top.
+   Palette: banknote green-greys, one engraving-green accent; chart series
+   colors are validated for color-vision deficiency on these surfaces. */
+:root {
+  --bg: #edf1ed;
+  --surface: #fbfcfa;
+  --surface-2: #f3f6f2;
+  --ink: #13201a;
+  --ink-2: #46564e;
+  --muted: #74817a;
+  --line: #dbe2dc;
+  --axis: #b9c3bc;
+  --accent: #1d5c47;
+  --accent-hover: #164a39;
+  --accent-ink: #ffffff;
+  --accent-soft: #dde9e1;
+  --term: rgba(29, 92, 71, 0.055);
+  --pi: #eb6834;
+  --u: #2a78d6;
+  --i: #1baf7a;
+  --ad: #6250d6;
+  --sras: #008300;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --warn: #fab219;
+  --warn-ink: #8a5a00;
+  --crit: #d03b3b;
+  --shadow: 0 1px 2px rgba(19, 32, 26, 0.06), 0 4px 16px rgba(19, 32, 26, 0.05);
+  --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-news: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --r: 10px;
+  --fs-xs: 0.75rem;
+  --fs-s: 0.8125rem;
+  --fs-m: 0.9375rem;
+  --fs-l: 1.125rem;
+  --fs-xl: 1.5rem;
+  --fs-xxl: 2.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b100e;
+    --surface: #141b18;
+    --surface-2: #19221e;
+    --ink: #e5ebe7;
+    --ink-2: #b1bdb6;
+    --muted: #7e8b84;
+    --line: #26302b;
+    --axis: #3b4741;
+    --accent: #63b892;
+    --accent-hover: #7ccaa5;
+    --accent-ink: #07130d;
+    --accent-soft: #1a2a22;
+    --term: rgba(99, 184, 146, 0.06);
+    --pi: #d95926;
+    --u: #3987e5;
+    --i: #199e70;
+    --ad: #9085e9;
+    --sras: #199e70;
+    --good-ink: #39c06a;
+    --warn-ink: #f2bb4a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b100e;
+  --surface: #141b18;
+  --surface-2: #19221e;
+  --ink: #e5ebe7;
+  --ink-2: #b1bdb6;
+  --muted: #7e8b84;
+  --line: #26302b;
+  --axis: #3b4741;
+  --accent: #63b892;
+  --accent-hover: #7ccaa5;
+  --accent-ink: #07130d;
+  --accent-soft: #1a2a22;
+  --term: rgba(99, 184, 146, 0.06);
+  --pi: #d95926;
+  --u: #3987e5;
+  --i: #199e70;
+  --ad: #9085e9;
+  --sras: #199e70;
+  --good-ink: #39c06a;
+  --warn-ink: #f2bb4a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 var(--fs-m)/1.5 var(--font-ui);
+}
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+b { font-weight: 600; }
+kbd {
+  font: 600 var(--fs-xs)/1 var(--font-ui);
+  padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 4px; background: var(--surface-2); color: var(--ink-2);
+}
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding-block: 16px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px 24px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { color: var(--accent); display: grid; }
+.brand-name { font: 700 var(--fs-xl)/1.1 var(--font-news); letter-spacing: -0.01em; }
+.brand-sub { font-size: var(--fs-s); color: var(--ink-2); }
+.term { justify-self: center; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.term-label { font-size: var(--fs-s); color: var(--ink-2); text-align: center; }
+.term-label > span:first-child { font-weight: 600; color: var(--ink); }
+.term-left { margin-left: 6px; }
+.pips { list-style: none; padding: 0; margin: 0; display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+.pips li { width: 14px; height: 6px; border-radius: 2px; background: var(--line); }
+.pips li.done { background: var(--accent); }
+.pips li.now { background: var(--accent); opacity: 0.45; }
+.pips li.year { margin-left: 5px; }
+.topnav { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+.btn {
+  border: 1px solid transparent; border-radius: 8px; padding: 7px 12px;
+  font-size: var(--fs-s); font-weight: 600; cursor: pointer; background: none;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.btn.ghost { color: var(--ink-2); }
+.btn.ghost:hover { background: var(--accent-soft); color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- news band ---------- */
+.news {
+  background: var(--surface);
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 18px 12px;
+}
+.news-inner { display: grid; gap: 2px; }
+.news-meta {
+  display: flex; gap: 12px; align-items: baseline;
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.news-paper { font: 700 var(--fs-s)/1 var(--font-news); letter-spacing: 0.02em; text-transform: none; color: var(--ink); }
+.news-head { font: 600 clamp(1.25rem, 1rem + 1.1vw, 1.75rem)/1.2 var(--font-news); letter-spacing: -0.005em; text-wrap: balance; }
+.news-deck { color: var(--ink-2); font-size: var(--fs-m); max-width: 95ch; }
+.news.flash .news-head { animation: ink 0.6s ease-out; }
+@keyframes ink { from { opacity: 0.25; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* ---------- main layout ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-areas:
+    "ts side"
+    "adas side"
+    "table table";
+  gap: 14px;
+  align-items: start;
+}
+.chart-card { grid-area: ts; }
+.side { grid-area: side; display: flex; flex-direction: column; gap: 14px; position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); }
+.adas-card { grid-area: adas; }
+.table-card { grid-area: table; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  min-width: 0;
+}
+.card h2 { font-size: var(--fs-m); font-weight: 600; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; margin-bottom: 6px; }
+.eyebrow { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.card h2.eyebrow { font-size: var(--fs-xs); }
+
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-s); color: var(--ink-2); }
+.legend li, .compare-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.key { display: inline-block; width: 16px; height: 0; border-top: 2.5px solid var(--ink); border-radius: 2px; }
+.key-pi { border-color: var(--pi); }
+.key-u { border-color: var(--u); }
+.key-i { border-color: var(--i); }
+.key-goal { border-top: 1.5px dashed var(--muted); }
+.key-ad { border-color: var(--ad); }
+.key-sras { border-color: var(--sras); }
+.key-lras { border-color: var(--ink); }
+.key-ghost { border-top: 1.5px dashed var(--muted); }
+.key-you { border-color: var(--ink); border-top-width: 3px; }
+.key-taylor { border-color: var(--accent); }
+.key-hold { border-top: 2px dashed var(--muted); }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+#tsChart { min-height: 240px; }
+.chart-note { font-size: var(--fs-s); color: var(--ink-2); margin-top: 4px; }
+
+/* svg text and marks */
+.ax text, .lbl { fill: var(--muted); font: 400 11px var(--font-ui); font-variant-numeric: tabular-nums; }
+.ax line.grid { stroke: var(--line); stroke-width: 1; }
+.ax line.base { stroke: var(--axis); stroke-width: 1; }
+.ax .title { fill: var(--ink-2); font-size: 12px; font-weight: 500; }
+.term-shade { fill: var(--term); }
+.term-tag { fill: var(--accent); font: 600 11px var(--font-ui); letter-spacing: 0.04em; }
+.goal { stroke-width: 1.25; stroke-dasharray: 5 4; fill: none; }
+.goal.pi { stroke: var(--pi); }
+.goal.u { stroke: var(--u); }
+.series { fill: none; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.series.pi { stroke: var(--pi); }
+.series.u { stroke: var(--u); }
+.series.i { stroke: var(--i); }
+.dot { stroke: var(--surface); stroke-width: 2; }
+.dot.pi { fill: var(--pi); }
+.dot.u { fill: var(--u); }
+.dot.i { fill: var(--i); }
+.endlbl, .eqm-lbl, .goalpt-lbl, .curve-lbl, .shock-lbl, .qe-lbl, .term-tag {
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round;
+}
+.endlbl { font: 600 12px var(--font-ui); fill: var(--ink); font-variant-numeric: tabular-nums; }
+.endlbl .nm { font-weight: 400; fill: var(--ink-2); }
+.qe-tick { fill: var(--i); opacity: 0.35; }
+.qe-lbl { fill: var(--ink-2); font: 500 10px var(--font-ui); }
+.shock-line { stroke: var(--crit); stroke-width: 1.25; }
+.shock-lbl { fill: var(--crit); font: 600 11px var(--font-ui); }
+.cross { stroke: var(--ink-2); stroke-width: 1; opacity: 0.5; }
+.hit { fill: transparent; cursor: crosshair; }
+
+.curve { fill: none; stroke-width: 2.25; stroke-linecap: round; }
+.curve.ad { stroke: var(--ad); }
+.curve.sras { stroke: var(--sras); }
+.curve.lras { stroke: var(--ink); }
+.curve.ghost { stroke-width: 1.25; stroke-dasharray: 4 4; opacity: 0.6; }
+.curve-lbl { font: 700 12px var(--font-ui); }
+.curve-lbl.ad { fill: var(--ad); }
+.curve-lbl.sras { fill: var(--sras); }
+.curve-lbl.lras { fill: var(--ink); }
+.eqm { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+.trail { fill: var(--ink-2); }
+.trail-line { stroke: var(--ink-2); stroke-width: 1; fill: none; opacity: 0.35; }
+.goalpt { fill: none; stroke: var(--good); stroke-width: 2; }
+.goalpt-lbl { fill: var(--good-ink); font: 600 11px var(--font-ui); }
+.eqm-lbl { fill: var(--ink); font: 600 11px var(--font-ui); font-variant-numeric: tabular-nums; }
+.cmp-you { stroke: var(--ink); stroke-width: 2.5; fill: none; }
+.cmp-taylor { stroke: var(--accent); stroke-width: 1.75; fill: none; }
+.cmp-hold { stroke: var(--muted); stroke-width: 1.75; stroke-dasharray: 5 4; fill: none; }
+.cmp-goal { stroke: var(--axis); stroke-width: 1; stroke-dasharray: 2 3; }
+
+/* ---------- decision panel ---------- */
+.decide { display: flex; flex-direction: column; gap: 12px; }
+.rate-row { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; gap: 8px; }
+.rate-btn {
+  height: 64px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2);
+  display: grid; place-items: center; align-content: center; gap: 0; cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, transform 0.06s;
+}
+.rate-btn span { font: 500 1.75rem/1 var(--font-ui); }
+.rate-btn small { font-size: var(--fs-xs); color: var(--ink-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.rate-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.rate-btn:active { transform: translateY(1px); }
+.rate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.rate-readout { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.rate-readout output { font: 700 var(--fs-xxl)/1 var(--font-ui); letter-spacing: -0.02em; }
+.rate-sub { font-size: var(--fs-s); color: var(--ink-2); min-height: 1.5em; }
+.rate-sub.up { color: var(--pi); }
+.rate-sub.down { color: var(--u); }
+.go { padding: 12px 14px; font-size: var(--fs-m); }
+.hint { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+
+/* ---------- stat tiles ---------- */
+.stats { display: flex; flex-direction: column; gap: 12px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+.tile { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); min-width: 0; }
+.tile dt { font-size: var(--fs-xs); color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.tile dt .swatch { width: 10px; height: 0; border-top: 2.5px solid; border-radius: 2px; }
+.tile dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.tile .v { font: 700 var(--fs-xl)/1.15 var(--font-ui); }
+.tile .dlt { font-size: var(--fs-xs); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tile .chip { font-size: var(--fs-xs); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.chip svg { flex: none; }
+.chip.good { color: var(--good-ink); }
+.chip.warn { color: var(--warn-ink); }
+.chip.crit { color: var(--crit); }
+.tile.minor .v { font-size: var(--fs-l); }
+.cred { display: flex; flex-direction: column; gap: 4px; }
+.cred-top { display: flex; justify-content: space-between; font-size: var(--fs-s); color: var(--ink-2); }
+.cred-top b { color: var(--ink); }
+.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter span { display: block; height: 100%; width: 80%; background: var(--accent); border-radius: 3px; transition: width 0.4s; }
+.cred-note { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ---------- AD-AS ---------- */
+.adas-wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.adas-explain { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+.curves { margin: 0; display: grid; gap: 10px; }
+.curves > div { display: grid; grid-template-columns: 48px 1fr; gap: 2px 8px; align-items: baseline; }
+.curves dt { font-weight: 700; font-size: var(--fs-s); }
+.curves dt.ad { color: var(--ad); }
+.curves dt.sras { color: var(--sras); }
+.curves dd { margin: 0; font-size: var(--fs-s); color: var(--ink-2); }
+.curves dd b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.shift-note { font-size: var(--fs-s); line-height: 1.5; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+
+/* ---------- table ---------- */
+.table-card { padding: 0; }
+.table-card summary { list-style: none; cursor: pointer; display: flex; gap: 12px; align-items: baseline; padding: 12px 16px; }
+.table-card summary::-webkit-details-marker { display: none; }
+.table-card summary::before { content: "\25B8"; color: var(--muted); transition: transform 0.15s; display: inline-block; }
+.table-card details[open] summary::before { transform: rotate(90deg); }
+.table-card summary h2 { display: inline; }
+.summary-hint { font-size: var(--fs-s); color: var(--muted); }
+.table-scroll { overflow-x: auto; }
+.table-card .table-scroll { padding: 0 16px; }
+table.data { border-collapse: collapse; width: 100%; font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+table.data th, table.data td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data thead th { color: var(--ink-2); font-weight: 600; font-size: var(--fs-xs); }
+table.data tr.pre td { color: var(--muted); }
+.table-actions { display: flex; gap: 6px; align-items: center; padding: 10px 12px 12px; flex-wrap: wrap; }
+.copy-msg { font-size: var(--fs-s); color: var(--good-ink); }
+
+.foot { font-size: var(--fs-xs); color: var(--muted); max-width: 90ch; }
+
+/* ---------- dialogs ---------- */
+.dlg {
+  border: 1px solid var(--line); border-radius: 14px; padding: 0;
+  background: var(--surface); color: var(--ink);
+  width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.dlg-wide { width: min(980px, calc(100vw - 32px)); }
+.dlg::backdrop { background: rgba(8, 14, 11, 0.55); }
+.dlg-body { padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+.dlg h2 { font: 700 var(--fs-xl)/1.2 var(--font-news); }
+.dlg h3 { font-size: var(--fs-m); font-weight: 700; }
+.dlg .lede { color: var(--ink-2); max-width: 75ch; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.small { font-size: var(--fs-s); color: var(--ink-2); }
+.help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 22px; }
+.help-grid p { font-size: var(--fs-m); color: var(--ink-2); margin-top: 4px; }
+.eq-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 22px; }
+.eq { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; min-width: 0; }
+.eq-name { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.eq code { font-size: 0.98rem; color: var(--ink); overflow-x: auto; white-space: nowrap; }
+.eq p { font-size: var(--fs-s); color: var(--ink-2); }
+table.params td:nth-child(2) { font-weight: 600; }
+table.params td:last-child { text-align: left; white-space: normal; color: var(--ink-2); }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+.form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-s); color: var(--ink-2); font-weight: 600; }
+.form-grid label.check { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; font-weight: 500; }
+.form-grid input[type="number"], .form-grid select {
+  padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font-weight: 400;
+}
+#shareLink { word-break: break-all; }
+
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+.grade {
+  width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 2.4rem/1 var(--font-news); border: 3px solid var(--good); color: var(--good-ink);
+}
+.grade.bad { border-color: var(--crit); color: var(--crit); }
+#endSummary { color: var(--ink-2); margin-top: 4px; }
+.shock-reveal { padding: 12px 14px; background: var(--surface-2); border-radius: 10px; display: flex; flex-direction: column; gap: 4px; }
+.shock-reveal h3 { font: 700 var(--fs-l)/1.2 var(--font-news); }
+.shock-kind { font-size: var(--fs-s); font-weight: 600; color: var(--ink-2); }
+.lesson { font-size: var(--fs-s); border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 4px; }
+.compare-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: var(--fs-s); color: var(--ink-2); }
+.compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.compare figure { margin: 0; min-width: 0; }
+.compare figcaption { font-size: var(--fs-s); font-weight: 600; margin-bottom: 2px; }
+.score-table td.best { font-weight: 700; }
+
+.tooltip {
+  position: fixed; z-index: 50; pointer-events: none;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: var(--shadow); padding: 8px 10px; font-size: var(--fs-s);
+  min-width: 150px;
+}
+.tooltip .tt-h { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 4px; }
+.tooltip .tt-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; }
+.tooltip .tt-row b { font-variant-numeric: tabular-nums; text-align: right; }
+.tooltip .tt-row span:nth-child(2) { color: var(--ink-2); }
+.tooltip .tt-key { width: 12px; border-top: 2.5px solid; border-radius: 2px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1040px) {
+  .topbar { grid-template-columns: 1fr auto; }
+  .term { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
+  .adas-wrap { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "ts" "side" "adas" "table";
+  }
+  .side { position: static; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .help-grid, .eq-list, .form-grid { grid-template-columns: 1fr; }
+  .compare { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .topbar { grid-template-columns: 1fr; }
+  .topnav { justify-content: flex-start; }
+  .brand-sub { display: none; }
+  .dlg-body { padding: 18px 16px; }
+  .rate-readout output { font-size: 2rem; }
+  .news { padding: 10px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+<!-- /build:head -->
+</head>
+<body>
+<!-- build:body -->
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 21 L12 15 L17 18 L26 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <h1 class="brand-name">The Fed Game</h1>
+        <p class="brand-sub">You chair the Fed for one four-year term.</p>
+      </div>
+    </div>
+    <div class="term" aria-live="polite">
+      <div class="term-label"><span id="termLabel">Year 1, Q1</span> <span class="term-left" id="termLeft">16 quarters left</span></div>
+      <ol class="pips" id="pips" aria-hidden="true"></ol>
+    </div>
+    <nav class="topnav" aria-label="Game menu">
+      <button type="button" class="btn ghost" id="btnHelp">How to play</button>
+      <button type="button" class="btn ghost" id="btnModel">The model</button>
+      <button type="button" class="btn ghost" id="btnSettings">Instructor</button>
+      <button type="button" class="btn ghost" id="btnNew">New game</button>
+    </nav>
+  </header>
+
+  <section class="news" aria-live="polite" aria-label="News">
+    <div class="news-inner">
+      <div class="news-meta"><span class="news-paper">The Economic Ledger</span><span id="newsDate">Year 1, Q1</span></div>
+      <p class="news-head" id="newsHead">Economy grows at a steady pace as new Fed chair takes office</p>
+      <p class="news-deck" id="newsDeck">Inflation is close to 2 percent and unemployment is near its natural rate. Markets wait for the new chair's first decision.</p>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="card chart-card" aria-labelledby="tsTitle">
+      <div class="card-head">
+        <h2 id="tsTitle">Inflation, unemployment and the federal funds rate</h2>
+        <ul class="legend" id="tsLegend">
+          <li><span class="key key-pi"></span>Inflation</li>
+          <li><span class="key key-u"></span>Unemployment</li>
+          <li><span class="key key-i"></span>Fed funds rate</li>
+          <li><span class="key key-goal"></span>Goals</li>
+        </ul>
+      </div>
+      <div class="chart" id="tsChart" role="img" aria-label="Line chart of inflation, unemployment and the federal funds rate by quarter"></div>
+      <p class="chart-note">Percent, annual rate. Shaded area is your term. Goals: inflation <b id="noteGoalPi">2%</b>, unemployment at its natural rate of <b id="noteGoalU">4.5%</b>.</p>
+    </section>
+
+    <aside class="side">
+      <section class="card decide" aria-labelledby="decideTitle">
+        <h2 id="decideTitle" class="eyebrow">Your decision for Year 1, Q1</h2>
+        <div class="rate-row">
+          <button type="button" class="rate-btn" id="btnCut" aria-label="Cut the rate by a quarter point">
+            <span aria-hidden="true">&minus;</span><small>Cut</small>
+          </button>
+          <div class="rate-readout">
+            <output id="rateOut" for="btnCut btnRaise" aria-live="polite">4.00%</output>
+            <span class="rate-sub" id="rateSub">Hold at current rate</span>
+          </div>
+          <button type="button" class="rate-btn" id="btnRaise" aria-label="Raise the rate by a quarter point">
+            <span aria-hidden="true">+</span><small>Raise</small>
+          </button>
+        </div>
+        <button type="button" class="btn primary go" id="btnGo">Set rate and run the quarter</button>
+        <p class="hint">Keys: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the rate, <kbd>Enter</kbd> runs the quarter.</p>
+      </section>
+
+      <section class="card stats" aria-labelledby="statsTitle">
+        <h2 id="statsTitle" class="eyebrow">Latest data, <span id="statsQ">Year 0, Q4</span></h2>
+        <dl class="tiles" id="tiles"></dl>
+        <div class="cred">
+          <div class="cred-top"><span>Fed credibility</span><b id="credVal">80%</b></div>
+          <div class="meter" aria-hidden="true"><span id="credBar"></span></div>
+          <p class="cred-note">How firmly people expect 2% inflation. It falls when inflation strays far from the goal.</p>
+        </div>
+      </section>
+    </aside>
+
+    <section class="card adas-card" aria-labelledby="adasTitle">
+      <div class="card-head">
+        <h2 id="adasTitle">The AD&ndash;AS model this quarter</h2>
+        <ul class="legend">
+          <li><span class="key key-ad"></span>AD</li>
+          <li><span class="key key-sras"></span>SRAS</li>
+          <li><span class="key key-lras"></span>LRAS</li>
+          <li><span class="key key-ghost"></span>Last quarter</li>
+        </ul>
+      </div>
+      <div class="adas-wrap">
+        <div class="chart" id="adasChart" role="img" aria-label="Aggregate demand and supply diagram, inflation against real GDP growth"></div>
+        <div class="adas-explain">
+          <dl class="curves" id="curves"></dl>
+          <p class="shift-note" id="shiftNote">The economy starts close to the goal point, where AD crosses LRAS at 2% inflation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card table-card" aria-labelledby="tableTitle">
+      <details id="tableDetails">
+        <summary><h2 id="tableTitle">Data table</h2><span class="summary-hint">Every quarter, for note-taking</span></summary>
+        <div class="table-scroll">
+          <table class="data" id="dataTable">
+            <thead><tr><th scope="col">Quarter</th><th scope="col">Fed funds</th><th scope="col">Inflation</th><th scope="col">Unemployment</th><th scope="col">Real GDP growth</th><th scope="col">Expected inflation</th><th scope="col">Real rate</th><th scope="col">Spending growth</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-actions">
+          <button type="button" class="btn ghost" id="btnCopy">Copy table</button>
+          <button type="button" class="btn ghost" id="btnCsv">Download CSV</button>
+          <span class="copy-msg" id="copyMsg" role="status"></span>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>An independent teaching tool, not affiliated with the Federal Reserve. The model follows the dynamic AD&ndash;AS framework in Cowen &amp; Tabarrok, <i>Modern Principles of Economics</i>, chapters 13, 15 and 16 (macro 32, 34, 35).</p>
+  </footer>
+</div>
+
+<!-- Dialogs -->
+<dialog class="dlg" id="dlgHelp" aria-labelledby="helpTitle">
+  <form method="dialog" class="dlg-body">
+    <p class="eyebrow">Briefing for the new chair</p>
+    <h2 id="helpTitle">Keep inflation near 2% and unemployment near its natural rate</h2>
+    <div class="help-grid">
+      <div>
+        <h3>Your tool</h3>
+        <p>Each quarter you set the <b>federal funds rate</b>, the overnight rate banks charge each other. The Fed hits it with open market operations. Lower rates speed up money and spending growth (<i>M&#771;</i> + <i>v&#771;</i>) and shift aggregate demand right. Higher rates shift it left.</p>
+      </div>
+      <div>
+        <h3>Your goals</h3>
+        <p>Inflation of <b class="goalPi">2%</b> and unemployment at its natural rate of <b class="goalU">4.5%</b>. Your term is 16 quarters. At the end, the President decides whether to reappoint you based on how close you stayed to both goals.</p>
+      </div>
+      <div>
+        <h3>The catch</h3>
+        <p>Rate changes take a few quarters to work through spending. Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
+      </div>
+      <div>
+        <h3>Real rates matter</h3>
+        <p>Spending responds to the <b>real</b> rate: the funds rate minus expected inflation. If inflation expectations rise and you leave the funds rate alone, policy gets looser. The neutral funds rate is about <b class="neutralI">4%</b> when expected inflation is 2%.</p>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn primary" value="start" id="btnStart">Take office</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-wide" id="dlgModel" aria-labelledby="modelTitle">
+  <form method="dialog" class="dlg-body">
+    <p class="eyebrow">Under the hood</p>
+    <h2 id="modelTitle">A quarterly version of the Cowen&ndash;Tabarrok AD&ndash;AS model</h2>
+    <p class="lede">The game uses the dynamic AD&ndash;AS diagram from <i>Modern Principles</i>: real GDP growth on the horizontal axis, inflation on the vertical. All rates are percent per year.</p>
+    <div class="eq-list">
+      <div class="eq"><span class="eq-name">Aggregate demand</span><code>&pi; + g = S</code><p>Spending growth <i>S</i> = <i>M&#771;</i> + <i>v&#771;</i> must be split between inflation &pi; and real growth <i>g</i>. AD is a line with slope &minus;1.</p></div>
+      <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
+      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;)&middot;m<sub>&minus;1</sub> + &omega;&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually. About half of a rate change bites in the first quarter.</p></div>
+      <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
+      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
+      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
+      <div class="eq"><span class="eq-name">Okun's law</span><code>&Delta;u = &minus;&beta;&middot;(g &minus; g&#772; &minus; &theta;&middot;z) / 4</code><p>Unemployment rises when growth falls short of its normal pace. Part of a real shock changes output per worker rather than jobs.</p></div>
+    </div>
+    <h3>Parameters</h3>
+    <div class="table-scroll"><table class="data params" id="paramTable"><tbody></tbody></table></div>
+    <p class="small">A longer write-up with classroom notes is in <code>docs/MODEL.md</code> in the project repository.</p>
+    <div class="dlg-actions"><button class="btn primary" value="close">Close</button></div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="dlgSettings" aria-labelledby="settingsTitle">
+  <form method="dialog" class="dlg-body" id="settingsForm">
+    <p class="eyebrow">Instructor settings</p>
+    <h2 id="settingsTitle">Set up a game</h2>
+    <p class="small">Starting a game with these settings resets the current game. Use the same seed and shock to give a whole class the same economy.</p>
+    <div class="form-grid">
+      <label for="setScenario">Shock
+        <select id="setScenario"></select>
+      </label>
+      <label for="setOnset">Shock hits in quarter
+        <select id="setOnset"><option value="">Random (2&ndash;5)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>8</option></select>
+      </label>
+      <label for="setSeed">Seed (random numbers)
+        <input id="setSeed" type="number" min="1" step="1" placeholder="Random">
+      </label>
+      <label for="setQuarters">Term length (quarters)
+        <input id="setQuarters" type="number" min="8" max="40" step="1" value="16">
+      </label>
+      <label for="setUstar">Natural rate of unemployment (%)
+        <input id="setUstar" type="number" min="2" max="9" step="0.1" value="4.5">
+      </label>
+      <label for="setGbar">Solow growth rate (%)
+        <input id="setGbar" type="number" min="0" max="6" step="0.1" value="3">
+      </label>
+      <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
+      <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>
+    </div>
+    <p class="small" id="shareRow">To give students this exact setup, add this to the end of the game's web address: <code id="shareLink"></code></p>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" value="apply" id="btnApply">Start game with these settings</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-wide" id="dlgEnd" aria-labelledby="endTitle">
+  <form method="dialog" class="dlg-body">
+    <div class="verdict" id="verdict">
+      <div class="grade" id="endGrade">B</div>
+      <div>
+        <p class="eyebrow" id="endEyebrow">The President's decision</p>
+        <h2 id="endTitle">Reappointed</h2>
+        <p id="endSummary"></p>
+      </div>
+    </div>
+    <div class="shock-reveal">
+      <p class="eyebrow">The shock in your term</p>
+      <h3 id="shockName"></h3>
+      <p class="shock-kind" id="shockKind"></p>
+      <p id="shockBlurb"></p>
+      <p class="lesson" id="shockLesson"></p>
+    </div>
+    <h3>How other policies would have done with the same shocks</h3>
+    <div class="compare-legend">
+      <span><span class="key key-you"></span>Your policy</span>
+      <span><span class="key key-taylor"></span>Taylor rule</span>
+      <span><span class="key key-hold"></span>Never change the rate</span>
+    </div>
+    <div class="compare" id="compare"></div>
+    <div class="table-scroll"><table class="data score-table" id="scoreTable"></table></div>
+    <p class="small">Distance from goals is the root-mean-square gap of inflation and unemployment from their goals over your term. Under 1.3 points earns reappointment. The Taylor rule sets the funds rate at r* + &pi; + 0.5(&pi; &minus; 2) + 0.5&times;output gap, using the past year's inflation.</p>
+    <div class="dlg-actions">
+      <button class="btn ghost" value="close">Look at the charts</button>
+      <button class="btn ghost" value="replay" id="btnReplay">Replay the same economy</button>
+      <button class="btn primary" value="new" id="btnAgain">Play a new game</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="tooltip" id="tooltip" role="presentation" hidden></div>
+
+<script>
+/*
+ * Fed Game: model engine
+ * ----------------------
+ * A quarterly version of the dynamic AD-AS model in Cowen & Tabarrok,
+ * Modern Principles of Economics, ch. 13 (32), 15 (34) and 16 (35).
+ *
+ * All rates are in percent per year (quarterly observations, annualized).
+ *
+ *   AD    :  pi_t + g_t = S_t                         (spending growth = M~ + v~)
+ *   Spend :  S_t = Ee_t + gBar - alpha*m_t + gamma*(u_{t-1} - uStar) + d_t
+ *   Lag   :  m_t = (1-omega)*m_{t-1} + omega*(i_t - Ee_t - rStar)
+ *   LRAS  :  gStar_t = gBar + z_t                       (Solow growth rate)
+ *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + c_t
+ *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
+ *   Expect:  Ee_{t+1} = (1-a_t)*[Ee_t + lambda*(pi_t - Ee_t)] + a_t*piStar,
+ *            a_t = anchor * credibility_t
+ *
+ * i_t is the federal funds rate chosen by the player, bounded below by zero.
+ * At zero the player can add quantitative easing (QE): each "round" of QE
+ * works like a cut of qeEff*step in the rate that enters the spending
+ * equation (C&T ch. 15: QE is used when the funds rate is near zero).
+ * d_t are aggregate-demand shocks (shifts of AD), z_t are real shocks
+ * (shifts of LRAS), c_t is a small price-level noise term.
+ *
+ * The file works both in the browser (window.FedModel) and in Node
+ * (module.exports) so the same code runs in the tests.
+ */
+(function (root) {
+  'use strict';
+
+  var DEFAULTS = {
+    gBar: 3.0,      // normal Solow growth rate (LRAS), %/yr
+    piStar: 2.0,    // inflation goal, %/yr
+    uStar: 4.5,     // natural rate of unemployment, %
+    rStar: 2.0,     // neutral real interest rate, %
+    kappa: 0.5,     // SRAS slope: extra inflation per point of growth above Solow
+    alpha: 1.0,     // spending-growth response to the real-rate gap
+    omega: 0.5,     // speed at which a rate change reaches spending (per quarter)
+    gamma: 0.6,     // self-correction: slack slowly revives spending
+    okun: 0.5,      // Okun's law coefficient
+    theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
+    lambda: 0.3,    // adaptive-expectations speed (per quarter)
+    anchor: 0.12,   // max pull of expectations toward the goal (at full credibility)
+    cred0: 0.8,     // starting credibility, 0..1
+    quarters: 16,   // length of the term (4 years)
+    history: 6,     // quarters of pre-game history shown on the chart
+    iMax: 20,       // highest rate allowed
+    step: 0.25,     // size of one rate move
+    qe: true,       // allow quantitative easing at the zero lower bound
+    qeMax: 3,       // QE rounds are entered as a "rate" below zero, down to -qeMax
+    qeEff: 0.5,     // a QE round is half as powerful as an equal rate cut
+    noiseD: 0.5,    // s.d. of AD noise innovations
+    rhoD: 0.5,      // persistence of AD noise
+    noiseZ: 0.25,   // s.d. of LRAS noise
+    noiseC: 0.2     // s.d. of price noise
+  };
+
+  /* ---------------- random numbers (seeded, reproducible) ---------------- */
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function gaussian(rand) {
+    var u = 0, v = 0;
+    while (u === 0) u = rand();
+    while (v === 0) v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function roundStep(x, step) { return Math.round(x / step) * step; }
+
+  /* ---------------------------- scenarios ---------------------------- */
+  // Each scenario returns its contribution to the AD shift (d), the LRAS
+  // shift (z) and a cost-push term (c, which shifts SRAS) k quarters after it hits.
+  // Categories follow C&T's table of factors that shift AD and LRAS.
+
+  function geo(size, rho) { return function (k) { return size * Math.pow(rho, k); }; }
+  function seq(arr, tail) {
+    return function (k) { return k < arr.length ? arr[k] : (tail || 0); };
+  }
+
+  var SCENARIOS = {
+    fear: {
+      name: 'A wave of fear',
+      kind: 'Negative aggregate demand shock',
+      curve: 'AD shifts left',
+      blurb: 'Consumers and businesses turn pessimistic ("animal spirits"). Households postpone big purchases and firms shelve investment plans, so spending growth falls.',
+      lesson: 'This is C&T\'s "best case" for monetary policy: a fall in AD lowers both inflation and growth, so cutting rates pushes both back toward the goals.',
+      d: geo(-4.5, 0.82), z: null
+    },
+    boom: {
+      name: 'Stock market and housing boom',
+      kind: 'Positive aggregate demand shock',
+      curve: 'AD shifts right',
+      blurb: 'Rising stock and house prices make people feel wealthier and more confident. Spending growth surges.',
+      lesson: 'An increase in AD raises growth in the short run but mostly raises inflation in the long run. Letting the boom run feeds higher inflation expectations.',
+      d: geo(3.8, 0.9), z: null
+    },
+    financial: {
+      name: 'Financial crisis',
+      kind: 'Large negative AD shock, plus a smaller real shock',
+      curve: 'AD shifts far left; LRAS shifts left a little',
+      blurb: 'A collapse in house prices triggers bank failures. Lending freezes, wealth falls and fear spreads. Broken financial intermediation also makes the economy less productive for a while.',
+      lesson: 'A very large drop in AD can push the right interest rate below zero. At the zero lower bound the Fed cannot cut further, so recovery is slower.',
+      d: geo(-7.0, 0.9), z: geo(-1.0, 0.8)
+    },
+    oil: {
+      name: 'Oil price shock',
+      kind: 'Negative real shock',
+      curve: 'LRAS (and SRAS) shift left',
+      blurb: 'A war in a major producing region cuts world oil supply and the price of oil more than doubles. Machines and workers become less productive, and consumers have less to spend on other goods.',
+      lesson: 'C&T\'s monetary policy dilemma: after a real shock the Fed can fight inflation or unemployment, but not both at once.',
+      d: geo(-1.0, 0.75),
+      z: seq([-4, -3, -1.5, 0, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75]),
+      c: seq([2, 1.5, 1, 0.5])
+    },
+    tech: {
+      name: 'Productivity boom',
+      kind: 'Positive real shock',
+      curve: 'LRAS shifts right',
+      blurb: 'New technology spreads quickly through offices and factories. Each worker produces more, and firms invest to adopt the new tools.',
+      lesson: 'A positive real shock raises growth and lowers inflation. The Fed can let the economy grow faster without stoking inflation.',
+      d: geo(1.0, 0.9), z: seq([2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5])
+    },
+    fiscal: {
+      name: 'Fiscal expansion',
+      kind: 'Positive aggregate demand shock',
+      curve: 'AD shifts right',
+      blurb: 'Congress passes large tax cuts together with a rise in government spending. Spending growth jumps and stays high.',
+      lesson: 'Faster growth of government spending and lower taxes shift AD right. With the economy already near its Solow rate, the extra spending mostly becomes inflation.',
+      d: geo(3.0, 0.94), z: null
+    },
+    exports: {
+      name: 'Strong dollar',
+      kind: 'Mild negative aggregate demand shock',
+      curve: 'AD shifts left a little',
+      blurb: 'The dollar rises sharply against other currencies. U.S. exports become more expensive abroad and imports cheaper at home.',
+      lesson: 'Lower export growth and higher import growth reduce AD. A small, short shock may need little response.',
+      d: geo(-2.0, 0.7), z: null
+    },
+    austerity: {
+      name: 'Fiscal tightening',
+      kind: 'Negative aggregate demand shock',
+      curve: 'AD shifts left',
+      blurb: 'To cut the deficit, Congress raises taxes and slows the growth of government spending.',
+      lesson: 'Higher taxes and slower growth of government spending shift AD left. Monetary policy can offset much of the drag.',
+      d: geo(-3.0, 0.92), z: null
+    },
+    pandemic: {
+      name: 'Pandemic',
+      kind: 'Real shock followed by a demand rebound',
+      curve: 'LRAS and AD shift left, then both rebound',
+      blurb: 'A new virus forces offices, schools and factories to close. Production and spending both collapse. When the economy reopens, pent-up demand floods back while supply chains are still tangled.',
+      lesson: 'Shocks can hit both curves at once and reverse. Policy that is right for the collapse can be too loose for the rebound.',
+      d: seq([-7, -2, 3, 3.5, 3.5, 3, 2.5, 2, 1.5, 1]),
+      z: seq([-6, -1, 3, 1.5, -1.5, -1.5, -0.5])
+    },
+    tariffs: {
+      name: 'Trade war',
+      kind: 'Negative real shock with a small demand effect',
+      curve: 'LRAS shifts left; AD shifts left a little',
+      blurb: 'Steep new tariffs raise the cost of imported parts and materials, and trading partners retaliate against U.S. exports.',
+      lesson: 'Higher taxes on inputs work like a negative real shock: inflation up, growth down. Retaliation also trims AD.',
+      d: geo(-1.5, 0.85), z: seq([-2.5, -2.5, -2.5, -2, -1.5, -1, -0.5]),
+      c: seq([1.5, 1.5, 1, 0.5])
+    },
+    none: {
+      name: 'No major shock',
+      kind: 'Only small random disturbances',
+      curve: 'Small shifts in AD and LRAS',
+      blurb: 'The economy is buffeted only by ordinary, small surprises.',
+      lesson: 'Even without a big shock, overreacting to noise can create the instability you are trying to avoid.',
+      d: null, z: null
+    }
+  };
+
+  var SCENARIO_KEYS = ['fear', 'boom', 'financial', 'oil', 'tech', 'fiscal', 'exports', 'austerity', 'pandemic', 'tariffs'];
+
+  /* ----------------------------- the game ----------------------------- */
+
+  function mergeParams(over) {
+    var p = {}, k;
+    for (k in DEFAULTS) p[k] = DEFAULTS[k];
+    if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
+    return p;
+  }
+
+  // Draw every random number for a game up front, so the same seed gives
+  // identical shocks for the player's path and the counterfactual paths.
+  function drawShocks(p, seed, scenarioKey, onset) {
+    var rand = mulberry32(seed);
+    var n = p.history + p.quarters;
+    var raw = [];
+    var dn = 0;
+    for (var t = 0; t < n; t++) {
+      dn = p.rhoD * dn + p.noiseD * gaussian(rand);
+      raw.push({ dn: dn, zn: p.noiseZ * gaussian(rand), cn: p.noiseC * gaussian(rand) });
+    }
+    var key = scenarioKey;
+    if (!key || key === 'random') key = SCENARIO_KEYS[Math.floor(rand() * SCENARIO_KEYS.length)];
+    if (!SCENARIOS[key]) key = 'none';
+    if (onset === undefined || onset === null) onset = 2 + Math.floor(rand() * 4); // game quarter 2-5
+    var sc = SCENARIOS[key];
+    var shocks = raw.map(function (r, t) {
+      var gq = t - p.history + 1;      // game quarter number (1..quarters); <=0 is history
+      var k = gq - onset;
+      var d = r.dn, z = r.zn, c = r.cn;
+      if (k >= 0) {
+        if (sc.d) d += sc.d(k);
+        if (sc.z) z += sc.z(k);
+        if (sc.c) c += sc.c(k);
+      }
+      return { d: d, z: z, c: c };
+    });
+    return { key: key, onset: onset, shocks: shocks };
+  }
+
+  function initialState(p) {
+    return {
+      i: p.rStar + p.piStar, m: 0, Ee: p.piStar, u: p.uStar, cred: p.cred0,
+      pi: p.piStar, g: p.gBar, S: p.piStar + p.gBar, gStar: p.gBar
+    };
+  }
+
+  // One quarter. `prev` is last quarter's record, `i` the rate chosen for
+  // this quarter, `sh` this quarter's shocks.
+  // `set` is the player's setting: >= 0 is the funds rate, < 0 means the
+  // funds rate is 0 plus QE.
+  function step(p, prev, set, sh) {
+    set = clamp(set, p.qe ? -p.qeMax : 0, p.iMax);
+    var i = Math.max(set, 0);
+    var qe = Math.max(-set, 0);
+    var iEff = i - p.qeEff * qe;
+    var Ee = prev.EeNext !== undefined ? prev.EeNext : prev.Ee;
+    var rgap = iEff - Ee - p.rStar;
+    var m = (1 - p.omega) * prev.m + p.omega * rgap;
+    var gStar = p.gBar + sh.z;
+    var S = Ee + p.gBar - p.alpha * m + p.gamma * (prev.u - p.uStar) + sh.d;
+    // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + c)
+    var g = (S - Ee - sh.c + p.kappa * gStar) / (1 + p.kappa);
+    var pi = S - g;
+    var u = Math.max(0.5, prev.u - p.okun * (g - p.gBar - p.theta * sh.z) / 4);
+    var miss = Math.abs(pi - p.piStar);
+    var cred = clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
+    var a = p.anchor * cred;
+    var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
+    return {
+      set: set, i: i, qe: qe, iEff: iEff, m: m, Ee: Ee, EeNext: EeNext, S: S, g: g,
+      gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c
+    };
+  }
+
+  /* ------------------------- benchmark policies ------------------------- */
+
+  var RULES = {
+    // Leave the rate where it started.
+    hold: function (p, hist) { return hist[p.history - 1].set; },
+    // The Taylor rule, using the data the Fed has when it meets: inflation
+    // over the past four quarters and last quarter's unemployment rate.
+    taylor: function (p, hist) {
+      var last = hist[hist.length - 1];
+      var n = Math.min(4, hist.length), pi4 = 0;
+      for (var j = 1; j <= n; j++) pi4 += hist[hist.length - j].pi / n;
+      var gap = -2 * (last.u - p.uStar);  // output gap via Okun's law
+      var i = p.rStar + pi4 + 0.5 * (pi4 - p.piStar) + 0.5 * gap;
+      return clamp(roundStep(i, p.step), p.qe ? -p.qeMax : 0, p.iMax);
+    }
+  };
+
+  /* ----------------------------- Game object ----------------------------- */
+
+  function Game(opts) {
+    opts = opts || {};
+    this.p = mergeParams(opts.params);
+    this.seed = (opts.seed === undefined || opts.seed === null) ? Math.floor(Math.random() * 1e9) : opts.seed >>> 0;
+    var drawn = drawShocks(this.p, this.seed, opts.scenario, opts.onset);
+    this.scenarioKey = drawn.key;
+    this.scenario = SCENARIOS[drawn.key];
+    this.onset = drawn.onset;
+    this.shocks = drawn.shocks;
+    this.hist = [];
+    // Pre-game history: the Fed holds the neutral rate.
+    var s = initialState(this.p);
+    var prev = { m: 0, Ee: s.Ee, u: s.u, cred: s.cred };
+    for (var t = 0; t < this.p.history; t++) {
+      prev = step(this.p, prev, s.i, this.shocks[t]);
+      this.hist.push(prev);
+    }
+  }
+
+  Game.prototype.quarter = function () { return this.hist.length - this.p.history; }; // quarters played
+  Game.prototype.done = function () { return this.quarter() >= this.p.quarters; };
+  Game.prototype.last = function () { return this.hist[this.hist.length - 1]; };
+  Game.prototype.play = function (i) {
+    if (this.done()) return null;
+    var t = this.hist.length;
+    var rec = step(this.p, this.last(), roundStep(i, 0.01), this.shocks[t]);
+    this.hist.push(rec);
+    return rec;
+  };
+  Game.prototype.played = function () { return this.hist.slice(this.p.history); };
+
+  // Run the same shocks under a benchmark policy.
+  Game.prototype.counterfactual = function (rule) {
+    var p = this.p, f = typeof rule === 'function' ? rule : RULES[rule];
+    var hist = this.hist.slice(0, p.history);
+    for (var t = p.history; t < p.history + p.quarters; t++) {
+      hist.push(step(p, hist[hist.length - 1], f(p, hist), this.shocks[t]));
+    }
+    return hist;
+  };
+
+  function score(p, records) {
+    var n = records.length;
+    if (!n) return null;
+    var sPi = 0, sU = 0, worstPi = records[0], worstU = records[0];
+    records.forEach(function (r) {
+      sPi += Math.pow(r.pi - p.piStar, 2);
+      sU += Math.pow(r.u - p.uStar, 2);
+      if (Math.abs(r.pi - p.piStar) > Math.abs(worstPi.pi - p.piStar)) worstPi = r;
+      if (Math.abs(r.u - p.uStar) > Math.abs(worstU.u - p.uStar)) worstU = r;
+    });
+    var rmsPi = Math.sqrt(sPi / n), rmsU = Math.sqrt(sU / n);
+    var dist = Math.sqrt((sPi + sU) / n);
+    return { rmsPi: rmsPi, rmsU: rmsU, dist: dist, worstPi: worstPi.pi, worstU: worstU.u, verdict: verdict(dist) };
+  }
+
+  function verdict(dist) {
+    if (dist < 0.7) return { grade: 'A', title: 'Reappointed with acclaim', ok: true };
+    if (dist < 1.0) return { grade: 'B', title: 'Reappointed', ok: true };
+    if (dist < 1.3) return { grade: 'C', title: 'Narrowly reappointed', ok: true };
+    if (dist < 2.0) return { grade: 'D', title: 'Not reappointed', ok: false };
+    return { grade: 'F', title: 'Not reappointed', ok: false };
+  }
+
+  Game.prototype.score = function (records) { return score(this.p, records || this.played()); };
+
+  var api = {
+    DEFAULTS: DEFAULTS, SCENARIOS: SCENARIOS, SCENARIO_KEYS: SCENARIO_KEYS, RULES: RULES,
+    Game: Game, step: step, score: score, verdict: verdict, mergeParams: mergeParams,
+    mulberry32: mulberry32, roundStep: roundStep
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.FedModel = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/*
+ * Fed Game: news headlines
+ * Each quarter the game prints a headline. When a shock first hits (and
+ * for two quarters after) the headline describes it, without naming the
+ * shock's category. Otherwise the headline reports the data.
+ */
+(function (root) {
+  'use strict';
+
+  var SHOCK_NEWS = {
+    fear: [
+      ['Consumer confidence plunges to its lowest level in a decade', 'Households put off buying cars and homes, and firms shelve expansion plans.'],
+      ['Retailers report weak sales as shoppers stay cautious', 'Surveys show families saving more and worrying about their jobs.'],
+      ['Business investment falls again', 'Executives say they will wait for "more clarity" before hiring or building.']
+    ],
+    boom: [
+      ['Stocks hit record highs as home prices soar', 'Rising wealth sends shoppers to car dealers and furniture stores.'],
+      ['Mortgage applications jump as buyers bid over asking price', 'Homeowners tap rising equity to fund renovations and vacations.'],
+      ['Spending stays hot; help-wanted signs everywhere', 'Restaurants and builders say they cannot hire fast enough.']
+    ],
+    financial: [
+      ['Major lender collapses as the housing market crashes', 'Banks stop lending to each other. Credit dries up for households and firms.'],
+      ['Bank failures spread; stocks fall sharply', 'Depositors line up to withdraw cash. Firms cannot roll over their loans.'],
+      ['Credit stays frozen as fear grips markets', 'Lenders demand far higher rates on anything but government bonds.']
+    ],
+    oil: [
+      ['Oil prices double as conflict cuts world supply', 'Gasoline prices spike. Airlines and truckers raise fares.'],
+      ['Factories cut shifts as energy costs bite', 'Higher fuel bills leave consumers less to spend on everything else.'],
+      ['Oil eases from its peak but stays high', 'Firms keep passing higher energy costs on to customers.']
+    ],
+    tech: [
+      ['New technology sparks a surge in productivity', 'Firms report big gains in output per worker as new tools spread.'],
+      ['Productivity growth hits its fastest pace in 20 years', 'Prices of many goods and services fall as costs drop.'],
+      ['Investment boom continues as firms race to adopt new tools', 'Analysts debate how long the faster growth can last.']
+    ],
+    fiscal: [
+      ['Congress passes major tax cut and spending package', 'Checks reach households and new projects begin. Spending jumps.'],
+      ['Government spending surge lifts orders for builders', 'Contractors add shifts to meet new public projects.'],
+      ['Deficit widens as stimulus keeps flowing', 'Economists say the package will boost demand for several years.']
+    ],
+    exports: [
+      ['Dollar soars to a multi-year high', 'U.S. goods get pricier abroad. Exporters warn of lost sales.'],
+      ['Exports slip as the strong dollar bites', 'Farmers and manufacturers report fewer foreign orders.'],
+      ['Cheap imports pressure domestic manufacturers', 'Shoppers switch to foreign goods as their prices fall.']
+    ],
+    austerity: [
+      ['Congress raises taxes and cuts spending to trim the deficit', 'Agencies freeze hiring. Households face smaller paychecks.'],
+      ['Government contractors announce layoffs', 'Cuts to public projects ripple through local economies.'],
+      ['Consumers tighten belts after the tax increase', 'Retailers lower their sales forecasts for the year.']
+    ],
+    pandemic: [
+      ['New virus forces shutdowns nationwide', 'Offices, schools and factories close. Spending collapses.'],
+      ['Economy begins to reopen, but supply chains stay snarled', 'Factories restart slowly; shipping costs soar.'],
+      ['Pent-up demand surges as shoppers return', 'Shortages spread as orders outrun what factories can make.']
+    ],
+    tariffs: [
+      ['Sweeping new tariffs take effect; trading partners retaliate', 'Imported parts and materials cost more. Farm exports face new barriers.'],
+      ['Manufacturers pass higher input costs on to customers', 'Firms reroute supply chains, at a cost.'],
+      ['Retaliation hits farm exports', 'Grain and soybean sales abroad fall sharply.']
+    ],
+    none: []
+  };
+
+  function f1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+
+  function fedLine(prevSet, set) {
+    var d = set - prevSet;
+    var lvl = set >= 0 ? set.toFixed(2) + '%' : '0.00% and expanded bond purchases';
+    if (set < 0 && prevSet < 0 && Math.abs(d) < 1e-9) return 'The Fed kept the funds rate at zero and held its bond purchases steady.';
+    if (set < 0 && d < 0) return 'The Fed held the funds rate at zero and stepped up quantitative easing.';
+    if (prevSet < 0 && d > 0) return set <= 0 ? 'The Fed scaled back its bond purchases.' : 'The Fed ended quantitative easing and raised the funds rate to ' + lvl + '.';
+    if (Math.abs(d) < 1e-9) return 'The Fed held the funds rate at ' + lvl + '.';
+    var size = Math.abs(d);
+    var big = size >= 0.75 ? ' In a surprise move, the' : ' The';
+    var verb = d > 0 ? 'raised' : 'cut';
+    return big + ' Fed ' + verb + ' the funds rate by ' + size.toFixed(2) + ' points to ' + lvl + '.';
+  }
+
+  // hist: full history array; t: index of the quarter just played;
+  // game: the Game object (for scenario, onset, params).
+  function headline(game, t) {
+    var p = game.p, h = game.hist, r = h[t], prev = h[t - 1];
+    var gq = t - p.history + 1;
+    var k = gq - game.onset;
+    var items = SHOCK_NEWS[game.scenarioKey] || [];
+    var fed = prev ? fedLine(prev.set, r.set) : '';
+    if (k >= 0 && k < items.length) {
+      return { head: items[k][0], deck: items[k][1] + ' ' + fed.trim() };
+    }
+    var dU = prev ? r.u - prev.u : 0;
+    var head, deck;
+    if (r.pi < 0) {
+      head = 'Prices fall for the first time in decades';
+      deck = 'Inflation is ' + f1(r.pi) + '%. Falling prices make debts harder to repay.';
+    } else if (r.pi > 5) {
+      head = 'Inflation reaches ' + f1(r.pi) + '%, the highest in years';
+      deck = 'Workers press for bigger raises to keep up with rising prices.';
+    } else if (r.u > p.uStar + 1.5 && dU > 0.05) {
+      head = 'Unemployment climbs to ' + f1(r.u) + '% as layoffs spread';
+      deck = 'Job seekers outnumber openings in most industries.';
+    } else if (r.u > p.uStar + 1 && dU < -0.05) {
+      head = 'Hiring picks up; unemployment eases to ' + f1(r.u) + '%';
+      deck = 'The recovery is gaining strength, though many are still out of work.';
+    } else if (r.pi > p.piStar + 1.5) {
+      head = 'Inflation runs hot at ' + f1(r.pi) + '%';
+      deck = 'Shoppers notice higher prices at the grocery store and the gas pump.';
+    } else if (r.u < p.uStar - 1) {
+      head = 'Labor shortage: unemployment falls to ' + f1(r.u) + '%';
+      deck = 'Employers raise wages to attract workers.';
+    } else if (r.pi < p.piStar - 1.2) {
+      head = 'Inflation slows to ' + f1(r.pi) + '%, well below the Fed\'s goal';
+      deck = 'Some economists warn of deflation if spending stays weak.';
+    } else if (r.g < 0) {
+      head = 'Economy shrinks at a ' + f1(-r.g) + '% annual rate';
+      deck = 'Two quarters like this would meet the popular definition of a recession.';
+    } else if (r.g > p.gBar + 1.5) {
+      head = 'Economy grows at a brisk ' + f1(r.g) + '% pace';
+      deck = 'Strong spending lifts sales and hiring.';
+    } else if (r.u > p.uStar + 0.6) {
+      head = 'Unemployment stuck at ' + f1(r.u) + '%';
+      deck = 'Growth is too slow to bring many people back to work.';
+    } else {
+      head = 'Economy grows at a steady ' + f1(r.g) + '% pace';
+      deck = 'Inflation is ' + f1(r.pi) + '% and unemployment ' + f1(r.u) + '%.';
+    }
+    if (r.cred < 0.35) deck += ' Markets doubt the Fed will bring inflation back to 2%.';
+    return { head: head, deck: deck + ' ' + fed.trim() };
+  }
+
+  var api = { headline: headline, SHOCK_NEWS: SHOCK_NEWS };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.FedNews = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/*
+ * Fed Game: SVG charts (no libraries)
+ *   FedCharts.timeSeries  - inflation, unemployment and the funds rate by quarter
+ *   FedCharts.adas        - the Cowen-Tabarrok AD-AS diagram for the current quarter
+ *   FedCharts.compare     - small multiples for the end-of-game comparison
+ */
+(function (root) {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function el(tag, attrs, parent, text) {
+    var n = document.createElementNS(NS, tag);
+    if (attrs) for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
+    if (text !== undefined) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function fmt(x, d) { return (x < 0 && x > -0.005 ? 0 : x).toFixed(d === undefined ? 1 : d); }
+  function path(pts) {
+    return pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+  }
+  function niceStep(range, target) {
+    var raw = range / target, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var n = raw / mag;
+    return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+  }
+  function svgFor(container, w, h) {
+    container.textContent = '';
+    return el('svg', { viewBox: '0 0 ' + w + ' ' + h, width: w, height: h, preserveAspectRatio: 'xMidYMid meet' }, container);
+  }
+
+  /* ------------------------------ tooltip ------------------------------ */
+  var tip = null;
+  function tooltip() { return tip || (tip = document.getElementById('tooltip')); }
+  function showTip(evt, title, rows) {
+    var t = tooltip(); if (!t) return;
+    t.textContent = '';
+    var h = document.createElement('div'); h.className = 'tt-h'; h.textContent = title; t.appendChild(h);
+    rows.forEach(function (r) {
+      var row = document.createElement('div'); row.className = 'tt-row';
+      var k = document.createElement('span'); k.className = 'tt-key'; k.style.borderColor = r.color || 'transparent';
+      var n = document.createElement('span'); n.textContent = r.name;
+      var v = document.createElement('b'); v.textContent = r.value;
+      row.appendChild(k); row.appendChild(n); row.appendChild(v); t.appendChild(row);
+    });
+    t.hidden = false;
+    var pad = 14, vw = window.innerWidth, vh = window.innerHeight;
+    var bw = t.offsetWidth, bh = t.offsetHeight;
+    var x = evt.clientX + pad, y = evt.clientY + pad;
+    if (x + bw > vw - 8) x = evt.clientX - bw - pad;
+    if (y + bh > vh - 8) y = evt.clientY - bh - pad;
+    t.style.left = Math.max(8, x) + 'px';
+    t.style.top = Math.max(8, y) + 'px';
+  }
+  function hideTip() { var t = tooltip(); if (t) t.hidden = true; }
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // Push labels apart vertically so they never overlap.
+  function spread(items, minGap, lo, hi) {
+    items.sort(function (a, b) { return a.y - b.y; });
+    for (var k = 0; k < 4; k++) {
+      for (var i = 1; i < items.length; i++) {
+        if (items[i].y - items[i - 1].y < minGap) items[i].y = items[i - 1].y + minGap;
+      }
+      var over = items.length ? items[items.length - 1].y - hi : 0;
+      if (over > 0) for (i = 0; i < items.length; i++) items[i].y -= over;
+      if (items.length && items[0].y < lo) {
+        var d = lo - items[0].y; for (i = 0; i < items.length; i++) items[i].y += d;
+      }
+    }
+    return items;
+  }
+
+  /* ---------------------------- time series ---------------------------- */
+  // opts: { n, historyLen, labels[], data[{pi,u,i,qe,iEff,g}], goalPi, goalU, shock:{index,name}|null }
+  function timeSeries(container, opts) {
+    var W = Math.max(300, container.clientWidth || 600);
+    var narrow = W < 520;
+    var H = Math.round(clamp(W * 0.42, 250, 390));
+    var m = { l: 34, r: narrow ? 92 : 128, t: 22, b: 26 };
+    var svg = svgFor(container, W, H);
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var n = opts.n, data = opts.data;
+
+    var vals = [opts.goalPi, opts.goalU, 0];
+    data.forEach(function (d) { vals.push(d.pi, d.u, d.i, d.iEff); });
+    var lo = Math.min(-1, Math.floor(Math.min.apply(null, vals) - 0.5));
+    var hi = Math.max(8, Math.ceil(Math.max.apply(null, vals) + 0.5));
+    var st = niceStep(hi - lo, 6);
+    lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st;
+    var X = function (i) { return m.l + (n > 1 ? i * pw / (n - 1) : 0); };
+    var Y = function (v) { return m.t + (hi - v) * ph / (hi - lo); };
+
+    var ax = el('g', { 'class': 'ax' }, svg);
+    // your term
+    var x0 = X(opts.historyLen - 0.5);
+    el('rect', { 'class': 'term-shade', x: x0, y: m.t, width: X(n - 1) - x0 + 6, height: ph }, svg);
+    el('text', { 'class': 'term-tag', x: x0 + 6, y: m.t - 8 }, svg, 'YOUR TERM');
+    // grid + y labels
+    for (var v = lo; v <= hi + 1e-9; v += st) {
+      el('line', { 'class': Math.abs(v) < 1e-9 ? 'base' : 'grid', x1: m.l, x2: m.l + pw + 6, y1: Y(v), y2: Y(v) }, ax);
+      el('text', { x: m.l - 6, y: Y(v) + 4, 'text-anchor': 'end' }, ax, fmt(v, 0) + (v === hi ? '%' : ''));
+    }
+    // x labels: start of each year
+    opts.labels.forEach(function (lab, i) {
+      if (i === 0) el('text', { x: X(i), y: H - 8, 'text-anchor': 'start' }, ax, 'Before');
+      else if (lab.year > 0 && lab.q === 1) el('text', { x: X(i), y: H - 8, 'text-anchor': 'middle' }, ax, (narrow ? 'Y' : 'Year ') + lab.year);
+    });
+
+    // goals
+    el('line', { 'class': 'goal pi', x1: m.l, x2: m.l + pw + 6, y1: Y(opts.goalPi), y2: Y(opts.goalPi) }, svg);
+    el('line', { 'class': 'goal u', x1: m.l, x2: m.l + pw + 6, y1: Y(opts.goalU), y2: Y(opts.goalU) }, svg);
+
+    // shock marker (shown at the end of the game)
+    if (opts.shock) {
+      var sx = X(opts.shock.index);
+      el('line', { 'class': 'shock-line', x1: sx, x2: sx, y1: m.t, y2: m.t + ph }, svg);
+      el('text', { 'class': 'shock-lbl', x: sx + 4, y: m.t + 12 }, svg, opts.shock.name);
+    }
+
+    // QE: dotted line for the rate-equivalent stance below zero
+    var qeRuns = [], run = null;
+    data.forEach(function (d, i) {
+      if (d.qe > 0) { if (!run) { run = []; if (i > 0) run.push([X(i - 1), Y(data[i - 1].iEff)]); } run.push([X(i), Y(d.iEff)]); }
+      else if (run) { run.push([X(i), Y(d.iEff)]); qeRuns.push(run); run = null; }
+    });
+    if (run) qeRuns.push(run);
+    qeRuns.forEach(function (r, k) {
+      el('path', { 'class': 'series i', d: path(r), 'stroke-dasharray': '2 4', 'stroke-width': 2 }, svg);
+      if (k === 0) {
+        var low = r.reduce(function (a, p) { return p[1] > a[1] ? p : a; }, r[0]);
+        el('text', { 'class': 'qe-lbl', x: low[0] + 4, y: low[1] + 13 }, svg, 'QE');
+      }
+    });
+
+    var series = [
+      { key: 'pi', name: 'Inflation' },
+      { key: 'u', name: 'Unemployment' },
+      { key: 'i', name: 'Fed funds' }
+    ];
+    if (data.length) {
+      series.forEach(function (s) {
+        var pts = data.map(function (d, i) { return [X(i), Y(d[s.key])]; });
+        el('path', { 'class': 'series ' + s.key, d: path(pts) }, svg);
+      });
+      var li = data.length - 1, lx = X(li);
+      var labs = series.map(function (s) { return { s: s, y: Y(data[li][s.key]), y0: Y(data[li][s.key]) }; });
+      spread(labs, 15, m.t + 4, m.t + ph);
+      labs.forEach(function (L) {
+        el('circle', { 'class': 'dot ' + L.s.key, cx: lx, cy: L.y0, r: 4.5 }, svg);
+        var t = el('text', { 'class': 'endlbl', x: lx + 9, y: L.y + 4 }, svg);
+        el('tspan', null, t, fmt(data[li][L.s.key], narrow ? 1 : 2) + '%');
+        if (!narrow || li < n - 3) el('tspan', { 'class': 'nm', dx: 4 }, t, L.s.name);
+      });
+    }
+
+    // crosshair + tooltip
+    var cross = el('line', { 'class': 'cross', y1: m.t, y2: m.t + ph, visibility: 'hidden' }, svg);
+    var hit = el('rect', { 'class': 'hit', x: m.l - 6, y: m.t, width: pw + 12, height: ph }, svg);
+    function onMove(evt) {
+      if (!data.length) return;
+      var r = svg.getBoundingClientRect();
+      var px = (evt.clientX - r.left) * W / r.width;
+      var i = clamp(Math.round((px - m.l) / (pw / (n - 1))), 0, data.length - 1);
+      cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i)); cross.setAttribute('visibility', 'visible');
+      var d = data[i], lab = opts.labels[i];
+      var rows = [
+        { name: 'Inflation', value: fmt(d.pi, 2) + '%', color: cssVar('--pi') },
+        { name: 'Unemployment', value: fmt(d.u, 2) + '%', color: cssVar('--u') },
+        { name: 'Fed funds rate', value: fmt(d.i, 2) + '%', color: cssVar('--i') }
+      ];
+      if (d.qe > 0) rows.push({ name: 'QE (rate equivalent)', value: fmt(d.iEff, 2) + '%' });
+      rows.push({ name: 'Real GDP growth', value: fmt(d.g, 1) + '%' });
+      showTip(evt, lab.text, rows);
+    }
+    hit.addEventListener('pointermove', onMove);
+    hit.addEventListener('pointerdown', onMove);
+    hit.addEventListener('pointerleave', function () { cross.setAttribute('visibility', 'hidden'); hideTip(); });
+  }
+
+  /* ------------------------------- AD-AS ------------------------------- */
+  // opts: { cur:{S,Ee,gStar,c,g,pi}, prev, trail:[{g,pi}], kappa, goal:{g,pi} }
+  function adas(container, opts) {
+    var W = Math.max(280, container.clientWidth || 420);
+    var H = Math.round(clamp(W * 0.78, 270, 420));
+    var m = { l: 40, r: 14, t: 14, b: 40 };
+    var svg = svgFor(container, W, H);
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var cur = opts.cur, prev = opts.prev, k = opts.kappa;
+
+    var xs = [cur.g, cur.gStar, opts.goal.g], ys = [cur.pi, opts.goal.pi];
+    if (prev) { xs.push(prev.g, prev.gStar); ys.push(prev.pi); }
+    (opts.trail || []).forEach(function (p) { xs.push(p.g); ys.push(p.pi); });
+    var xlo = Math.min(-4, Math.floor(Math.min.apply(null, xs) - 2)), xhi = Math.max(8, Math.ceil(Math.max.apply(null, xs) + 2));
+    var ylo = Math.min(-2, Math.floor(Math.min.apply(null, ys) - 2)), yhi = Math.max(8, Math.ceil(Math.max.apply(null, ys) + 2));
+    var sx = niceStep(xhi - xlo, 7), sy = niceStep(yhi - ylo, 6);
+    xlo = Math.floor(xlo / sx) * sx; xhi = Math.ceil(xhi / sx) * sx;
+    ylo = Math.floor(ylo / sy) * sy; yhi = Math.ceil(yhi / sy) * sy;
+    var X = function (g) { return m.l + (g - xlo) * pw / (xhi - xlo); };
+    var Y = function (p) { return m.t + (yhi - p) * ph / (yhi - ylo); };
+
+    var clipId = 'adclip' + Math.floor(Math.random() * 1e6);
+    var defs = el('defs', null, svg);
+    var cp = el('clipPath', { id: clipId }, defs);
+    el('rect', { x: m.l, y: m.t, width: pw, height: ph }, cp);
+
+    var ax = el('g', { 'class': 'ax' }, svg);
+    var v;
+    for (v = xlo; v <= xhi + 1e-9; v += sx) {
+      el('line', { 'class': Math.abs(v) < 1e-9 ? 'base' : 'grid', x1: X(v), x2: X(v), y1: m.t, y2: m.t + ph }, ax);
+      el('text', { x: X(v), y: m.t + ph + 15, 'text-anchor': 'middle' }, ax, fmt(v, 0));
+    }
+    for (v = ylo; v <= yhi + 1e-9; v += sy) {
+      el('line', { 'class': Math.abs(v) < 1e-9 ? 'base' : 'grid', x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v) }, ax);
+      el('text', { x: m.l - 6, y: Y(v) + 4, 'text-anchor': 'end' }, ax, fmt(v, 0));
+    }
+    el('text', { 'class': 'title', x: m.l + pw / 2, y: H - 6, 'text-anchor': 'middle' }, ax, 'Real GDP growth rate (%)');
+    el('text', { 'class': 'title', x: 12, y: m.t + ph / 2, transform: 'rotate(-90 12 ' + (m.t + ph / 2) + ')', 'text-anchor': 'middle' }, ax, 'Inflation rate (%)');
+
+    var g = el('g', { 'clip-path': 'url(#' + clipId + ')' }, svg);
+    function curves(s, ghost) {
+      var cls = ghost ? ' ghost' : '';
+      el('line', { 'class': 'curve lras' + cls, x1: X(s.gStar), x2: X(s.gStar), y1: m.t, y2: m.t + ph }, g);
+      el('line', { 'class': 'curve ad' + cls, x1: X(xlo), y1: Y(s.S - xlo), x2: X(xhi), y2: Y(s.S - xhi) }, g);
+      var sr = function (gg) { return s.Ee + s.c + k * (gg - s.gStar); };
+      el('line', { 'class': 'curve sras' + cls, x1: X(xlo), y1: Y(sr(xlo)), x2: X(xhi), y2: Y(sr(xhi)) }, g);
+    }
+    if (prev) curves(prev, true);
+    curves(cur, false);
+
+    // trail of recent outcomes
+    var trail = opts.trail || [];
+    if (trail.length > 1) {
+      el('path', { 'class': 'trail-line', d: path(trail.map(function (p) { return [X(p.g), Y(p.pi)]; })) }, g);
+      trail.slice(0, -1).forEach(function (p, i) {
+        el('circle', { 'class': 'trail', cx: X(p.g), cy: Y(p.pi), r: 2.5, opacity: (0.25 + 0.6 * (i + 1) / trail.length).toFixed(2) }, g);
+      });
+    }
+    // goal point
+    el('circle', { 'class': 'goalpt', cx: X(opts.goal.g), cy: Y(opts.goal.pi), r: 7 }, svg);
+    el('text', { 'class': 'goalpt-lbl', x: X(opts.goal.g) - 10, y: Y(opts.goal.pi) + 18, 'text-anchor': 'end' }, svg, 'Goal');
+
+    // labels for the current curves
+    var adLx = xhi - 0.4, adLy = cur.S - adLx;
+    if (adLy < ylo + 0.8) { adLy = ylo + 0.8; adLx = cur.S - adLy; }
+    el('text', { 'class': 'curve-lbl ad', x: X(adLx) + 4, y: Y(adLy) - 6, 'text-anchor': adLx > xhi - 1.5 ? 'end' : 'start' }, svg, 'AD');
+    var srLx = xhi - 0.4, srLy = cur.Ee + cur.c + k * (srLx - cur.gStar);
+    if (srLy > yhi - 0.6) { srLy = yhi - 0.6; srLx = cur.gStar + (srLy - cur.Ee - cur.c) / k; }
+    el('text', { 'class': 'curve-lbl sras', x: X(srLx) - 2, y: Y(srLy) + 16, 'text-anchor': 'end' }, svg, 'SRAS');
+    el('text', { 'class': 'curve-lbl lras', x: X(cur.gStar) + 5, y: m.t + 13 }, svg, 'LRAS');
+
+    // equilibrium
+    var ex = X(cur.g), ey = Y(cur.pi);
+    el('circle', { 'class': 'eqm', cx: ex, cy: ey, r: 6 }, svg);
+    var right = ex < m.l + pw - 90;
+    el('text', { 'class': 'eqm-lbl', x: right ? ex + 10 : ex - 10, y: ey - 9, 'text-anchor': right ? 'start' : 'end' }, svg,
+      'g ' + fmt(cur.g) + '%, π ' + fmt(cur.pi) + '%');
+  }
+
+  /* ------------------------------ compare ------------------------------ */
+  // opts: { title, key, goal, runs:{you,taylor,hold}, labels }
+  function compare(container, opts) {
+    var W = Math.max(240, container.clientWidth || 300);
+    var H = Math.round(clamp(W * 0.62, 170, 230));
+    var m = { l: 30, r: 10, t: 10, b: 22 };
+    var svg = svgFor(container, W, H);
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var runs = opts.runs, key = opts.key, n = runs.you.length;
+    var vals = [opts.goal === null ? 0 : opts.goal];
+    ['you', 'taylor', 'hold'].forEach(function (r) { runs[r].forEach(function (d) { vals.push(d[key]); }); });
+    var lo = Math.floor(Math.min.apply(null, vals) - 0.3), hi = Math.ceil(Math.max.apply(null, vals) + 0.3);
+    var st = niceStep(hi - lo, 4); lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st;
+    var X = function (i) { return m.l + i * pw / Math.max(1, n - 1); };
+    var Y = function (v) { return m.t + (hi - v) * ph / (hi - lo); };
+    var ax = el('g', { 'class': 'ax' }, svg);
+    for (var v = lo; v <= hi + 1e-9; v += st) {
+      el('line', { 'class': Math.abs(v) < 1e-9 ? 'base' : 'grid', x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v) }, ax);
+      el('text', { x: m.l - 5, y: Y(v) + 4, 'text-anchor': 'end' }, ax, fmt(v, 0));
+    }
+    for (var q = 0; q < n; q += 4) el('text', { x: X(q), y: H - 6, 'text-anchor': q === 0 ? 'start' : 'middle' }, ax, 'Y' + (q / 4 + 1));
+    if (opts.goal !== null) el('line', { 'class': 'cmp-goal', x1: m.l, x2: m.l + pw, y1: Y(opts.goal), y2: Y(opts.goal) }, svg);
+    ['hold', 'taylor', 'you'].forEach(function (r) {
+      el('path', { 'class': 'cmp-' + r, d: path(runs[r].map(function (d, i) { return [X(i), Y(d[key])]; })) }, svg);
+    });
+    var hit = el('rect', { 'class': 'hit', x: m.l, y: m.t, width: pw, height: ph }, svg);
+    var cross = el('line', { 'class': 'cross', y1: m.t, y2: m.t + ph, visibility: 'hidden' }, svg);
+    hit.addEventListener('pointermove', function (evt) {
+      var r = svg.getBoundingClientRect();
+      var i = clamp(Math.round(((evt.clientX - r.left) * W / r.width - m.l) / (pw / Math.max(1, n - 1))), 0, n - 1);
+      cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i)); cross.setAttribute('visibility', 'visible');
+      showTip(evt, opts.title + ', ' + opts.labels[i], [
+        { name: 'Your policy', value: fmt(runs.you[i][key], 2) + '%', color: cssVar('--ink') },
+        { name: 'Taylor rule', value: fmt(runs.taylor[i][key], 2) + '%', color: cssVar('--accent') },
+        { name: 'No change', value: fmt(runs.hold[i][key], 2) + '%', color: cssVar('--muted') }
+      ]);
+    });
+    hit.addEventListener('pointerleave', function () { cross.setAttribute('visibility', 'hidden'); hideTip(); });
+  }
+
+  root.FedCharts = { timeSeries: timeSeries, adas: adas, compare: compare, hideTip: hideTip };
+})(window);
+</script>
+<script>
+/*
+ * Fed Game: user interface
+ */
+(function () {
+  'use strict';
+  var M = window.FedModel, News = window.FedNews, C = window.FedCharts;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var state = {
+    game: null,
+    setting: 4,          // rate the player is about to choose
+    opts: {},            // options used to create the current game
+    demoTimer: null,
+    ended: false
+  };
+
+  /* ------------------------------ helpers ------------------------------ */
+  function f(x, d) { if (x < 0 && x > -0.005) x = 0; return x.toFixed(d === undefined ? 1 : d); }
+  function signed(x, d) {
+    var s = f(x, d);
+    if (Number(s) === 0) return '\u00B10.0';
+    return (Number(s) > 0 ? '+' : '') + s;
+  }
+
+  function qLabel(p, t) {
+    // t: index into hist. Game quarters start at index p.history.
+    var gq = t - p.history + 1;
+    if (gq <= 0) {
+      var back = 1 - gq; // 1 = last quarter before the term
+      return { year: 0, q: 5 - back, text: back === 1 ? 'Quarter before your term' : back + ' quarters before your term' };
+    }
+    var year = Math.floor((gq - 1) / 4) + 1, q = ((gq - 1) % 4) + 1;
+    return { year: year, q: q, text: 'Year ' + year + ', Q' + q };
+  }
+
+  function readParams() {
+    var q = new URLSearchParams(location.search);
+    var o = {};
+    if (q.get('scenario')) o.scenario = q.get('scenario');
+    if (q.get('seed')) o.seed = parseInt(q.get('seed'), 10);
+    if (q.get('onset')) o.onset = parseInt(q.get('onset'), 10);
+    var params = {};
+    if (q.get('quarters')) params.quarters = clampInt(q.get('quarters'), 8, 40);
+    if (q.get('ustar')) params.uStar = parseFloat(q.get('ustar'));
+    if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
+    if (q.get('qe') === '0') params.qe = false;
+    o.params = params;
+    o.demo = q.get('demo') === '1';
+    return o;
+  }
+  function clampInt(v, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? undefined : Math.max(lo, Math.min(hi, v)); }
+
+  /* ----------------------------- new game ----------------------------- */
+  function newGame(opts) {
+    stopDemo();
+    opts = opts || {};
+    state.opts = opts;
+    state.game = new M.Game({ seed: opts.seed, scenario: opts.scenario || 'random', onset: opts.onset, params: opts.params });
+    state.setting = state.game.last().set;
+    state.ended = false;
+    $('dlgEnd').open && $('dlgEnd').close();
+    var p = state.game.p;
+    document.querySelectorAll('.goalPi').forEach(function (n) { n.textContent = f(p.piStar, 0) + '%'; });
+    document.querySelectorAll('.goalU').forEach(function (n) { n.textContent = f(p.uStar, 1) + '%'; });
+    document.querySelectorAll('.neutralI').forEach(function (n) { n.textContent = f(p.rStar + p.piStar, 0) + '%'; });
+    $('noteGoalPi').textContent = f(p.piStar, 0) + '%';
+    $('noteGoalU').textContent = f(p.uStar, 1) + '%';
+    setNews({
+      head: 'New Fed chair takes office as the economy grows at a steady pace',
+      deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%. Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
+    }, 'Before your term');
+    buildPips();
+    renderAll();
+    if (opts.demo) startDemo();
+  }
+
+  /* ------------------------------ playing ------------------------------ */
+  function playQuarter() {
+    var g = state.game;
+    if (!g || g.done()) return;
+    g.play(state.setting);
+    var t = g.hist.length - 1;
+    setNews(News.headline(g, t), qLabel(g.p, t).text);
+    renderAll();
+    if (g.done()) {
+      state.ended = true;
+      stopDemo();
+      setTimeout(showEnd, 500);
+    }
+  }
+
+  function nudge(dir) {
+    var g = state.game; if (!g || g.done()) return;
+    var p = g.p, lo = p.qe ? -p.qeMax : 0;
+    state.setting = Math.max(lo, Math.min(p.iMax, M.roundStep(state.setting + dir * p.step, p.step)));
+    renderDecision();
+  }
+
+  /* ------------------------------ rendering ------------------------------ */
+  function renderAll() {
+    renderTerm();
+    renderDecision();
+    renderTiles();
+    renderCharts();
+    renderTable();
+  }
+
+  function buildPips() {
+    var ol = $('pips'); ol.textContent = '';
+    for (var q = 1; q <= state.game.p.quarters; q++) {
+      var li = document.createElement('li');
+      if (q > 1 && (q - 1) % 4 === 0) li.className = 'year';
+      ol.appendChild(li);
+    }
+  }
+
+  function renderTerm() {
+    var g = state.game, p = g.p, played = g.quarter();
+    var lis = $('pips').children;
+    for (var i = 0; i < lis.length; i++) {
+      lis[i].classList.toggle('done', i < played);
+      lis[i].classList.toggle('now', i === played && !g.done());
+    }
+    var nextLab = qLabel(p, g.hist.length);
+    $('termLabel').textContent = g.done() ? 'Term complete' : nextLab.text;
+    var left = p.quarters - played;
+    $('termLeft').textContent = g.done() ? '' : left + (left === 1 ? ' quarter left' : ' quarters left');
+    $('decideTitle').textContent = g.done() ? 'Your term is over' : 'Your decision for ' + nextLab.text;
+    $('statsQ').textContent = qLabel(p, g.hist.length - 1).text.replace('Quarter before your term', 'before your term');
+  }
+
+  function renderDecision() {
+    var g = state.game, p = g.p, cur = g.last().set, s = state.setting;
+    var out = $('rateOut'), sub = $('rateSub'), d = s - cur, txt;
+    var same = Math.abs(d) < 1e-9;
+    if (s < 0) {
+      var rounds = Math.round(-s / p.step);
+      out.textContent = '0.00%';
+      txt = 'plus QE: ' + rounds + (rounds === 1 ? ' round' : ' rounds') + ' of bond buying' + (same ? ' (unchanged)' : '');
+    } else {
+      out.textContent = f(s, 2) + '%';
+      if (cur < 0) txt = s === 0 ? 'End QE; the rate stays at zero' : 'End QE and raise the rate';
+      else if (same) txt = 'Hold at current rate';
+      else txt = (d > 0 ? 'Raise by ' : 'Cut by ') + f(Math.abs(d), 2) + ' points';
+    }
+    sub.textContent = txt;
+    sub.className = 'rate-sub' + (d > 1e-9 ? ' up' : d < -1e-9 ? ' down' : '');
+    var done = g.done();
+    $('btnGo').disabled = done || !!state.demoTimer;
+    $('btnCut').disabled = done || s <= (p.qe ? -p.qeMax : 0);
+    $('btnRaise').disabled = done || s >= p.iMax;
+    $('btnCut').querySelector('small').textContent = (s <= 0 && p.qe) ? 'QE' : 'Cut';
+    $('btnCut').setAttribute('aria-label', (s <= 0 && p.qe) ? 'Add a round of quantitative easing' : 'Cut the rate by a quarter point');
+    $('btnGo').textContent = done ? 'Term complete' : state.demoTimer ? 'Demo running\u2026' :
+      (same ? 'Hold the rate and run the quarter' : 'Set rate and run the quarter');
+  }
+
+  var ICON = {
+    good: '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.5 9.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warn: '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5 11 10.5H1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 5v2.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    crit: '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3.4v3M6 8.4v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+
+  function chipFor(gap, unit) {
+    var a = Math.abs(gap);
+    var cls = a < 0.5 ? 'good' : a < 1.5 ? 'warn' : 'crit';
+    var txt = a < 0.5 ? 'On target' : f(a) + ' ' + (gap > 0 ? 'above' : 'below') + ' ' + unit;
+    return { cls: cls, html: ICON[cls], text: txt };
+  }
+
+  function tile(dl, opt) {
+    var d = document.createElement('div'); d.className = 'tile' + (opt.minor ? ' minor' : '');
+    var dt = document.createElement('dt');
+    if (opt.color) { var sw = document.createElement('span'); sw.className = 'swatch'; sw.style.borderColor = 'var(' + opt.color + ')'; dt.appendChild(sw); }
+    dt.appendChild(document.createTextNode(opt.label));
+    var dd = document.createElement('dd');
+    var v = document.createElement('span'); v.className = 'v'; v.textContent = opt.value; dd.appendChild(v);
+    if (opt.delta !== undefined) { var dl2 = document.createElement('span'); dl2.className = 'dlt'; dl2.textContent = opt.delta; dd.appendChild(dl2); }
+    d.appendChild(dt); d.appendChild(dd);
+    if (opt.chip) {
+      var c = document.createElement('span'); c.className = 'chip ' + opt.chip.cls;
+      c.innerHTML = opt.chip.html; c.appendChild(document.createTextNode(opt.chip.text));
+      d.appendChild(c);
+    }
+    dl.appendChild(d);
+  }
+
+  function renderTiles() {
+    var g = state.game, p = g.p, r = g.last(), prev = g.hist[g.hist.length - 2];
+    var dl = $('tiles'); dl.textContent = '';
+    tile(dl, { label: 'Inflation', color: '--pi', value: f(r.pi) + '%', delta: prev ? signed(r.pi - prev.pi) : undefined, chip: chipFor(r.pi - p.piStar, 'goal') });
+    tile(dl, { label: 'Unemployment', color: '--u', value: f(r.u) + '%', delta: prev ? signed(r.u - prev.u) : undefined, chip: chipFor(r.u - p.uStar, 'natural') });
+    tile(dl, { label: 'Real GDP growth', value: f(r.g) + '%', delta: 'Solow rate ' + f(p.gBar) + '%', minor: true });
+    tile(dl, { label: 'Fed funds rate', color: '--i', value: f(r.i, 2) + '%', delta: r.qe > 0 ? '+ QE' : undefined, minor: true });
+    tile(dl, { label: 'Expected inflation', value: f(r.EeNext) + '%', delta: 'for next quarter', minor: true });
+    tile(dl, { label: 'Real interest rate', value: f(r.r) + '%', delta: 'neutral ' + f(p.rStar) + '%', minor: true });
+    var pct = Math.round(r.cred * 100);
+    $('credVal').textContent = pct + '%';
+    $('credBar').style.width = pct + '%';
+  }
+
+  function renderCharts() {
+    var g = state.game, p = g.p;
+    var n = p.history + p.quarters;
+    var labels = [];
+    for (var t = 0; t < n; t++) labels.push(qLabel(p, t));
+    var data = g.hist.map(function (h) { return { pi: h.pi, u: h.u, i: h.i, qe: h.qe, iEff: h.iEff, g: h.g }; });
+    var shock = null;
+    if (g.done() && g.scenarioKey !== 'none') shock = { index: p.history + g.onset - 1, name: g.scenario.name };
+    C.timeSeries($('tsChart'), { n: n, historyLen: p.history, labels: labels, data: data, goalPi: p.piStar, goalU: p.uStar, shock: shock });
+
+    var cur = g.last(), prev = g.hist[g.hist.length - 2];
+    var pack = function (h) { return { S: h.S, Ee: h.Ee, gStar: h.gStar, c: h.c, g: h.g, pi: h.pi }; };
+    var trail = g.hist.slice(-6).map(function (h) { return { g: h.g, pi: h.pi }; });
+    C.adas($('adasChart'), { cur: pack(cur), prev: prev ? pack(prev) : null, trail: trail, kappa: p.kappa, goal: { g: p.gBar, pi: p.piStar } });
+    renderCurves(cur, prev);
+  }
+
+  function renderCurves(cur, prev) {
+    var p = state.game.p;
+    var dl = $('curves'); dl.textContent = '';
+    function row(cls, name, html) {
+      var d = document.createElement('div');
+      var dt = document.createElement('dt'); dt.className = cls; dt.textContent = name;
+      var dd = document.createElement('dd'); dd.innerHTML = html;
+      d.appendChild(dt); d.appendChild(dd); dl.appendChild(d);
+    }
+    row('ad', 'AD', 'Spending growth <i>M&#771;</i> + <i>v&#771;</i> = <b>' + f(cur.S) + '%</b>' + (prev ? ' (' + signed(cur.S - prev.S) + ')' : ''));
+    row('sras', 'SRAS', 'Drawn for expected inflation E(&pi;) = <b>' + f(cur.Ee) + '%</b>' + (prev ? ' (' + signed(cur.Ee - prev.Ee) + ')' : ''));
+    row('lras', 'LRAS', 'Solow growth rate = <b>' + f(cur.gStar) + '%</b>' + (prev ? ' (' + signed(cur.gStar - prev.gStar) + ')' : ''));
+    $('shiftNote').textContent = describeShift(cur, prev, p);
+  }
+
+  function describeShift(cur, prev, p) {
+    if (!prev) return 'The economy starts close to the goal point, where AD crosses LRAS at 2% inflation.';
+    var parts = [];
+    var dS = cur.S - prev.S, dZ = cur.gStar - prev.gStar, dE = cur.Ee - prev.Ee;
+    if (Math.abs(dS) >= 0.4) parts.push('AD shifted ' + (dS > 0 ? 'right' : 'left') + ' as spending growth ' + (dS > 0 ? 'rose' : 'fell') + ' by ' + f(Math.abs(dS)) + ' points.');
+    if (Math.abs(dZ) >= 0.6) parts.push('LRAS shifted ' + (dZ > 0 ? 'right' : 'left') + ': a real shock ' + (dZ > 0 ? 'raised' : 'lowered') + ' the Solow growth rate to ' + f(cur.gStar) + '%.');
+    if (Math.abs(dE) >= 0.15) parts.push('SRAS shifted ' + (dE > 0 ? 'up' : 'down') + ' because expected inflation ' + (dE > 0 ? 'rose' : 'fell') + ' to ' + f(cur.Ee) + '%.');
+    if (Math.abs(cur.c) >= 0.8) parts.push('Higher costs pushed SRAS ' + (cur.c > 0 ? 'up' : 'down') + ' this quarter.');
+    if (!parts.length) parts.push('The curves barely moved this quarter.');
+    var gap = cur.g - cur.gStar;
+    if (gap > 0.5) parts.push('Growth is above the Solow rate, so inflation is running above expectations.');
+    else if (gap < -0.5) parts.push('Growth is below the Solow rate, so inflation is running below expectations.');
+    return parts.join(' ');
+  }
+
+  function renderTable() {
+    var g = state.game, p = g.p, tb = $('dataTable').tBodies[0];
+    tb.textContent = '';
+    g.hist.forEach(function (h, t) {
+      var tr = document.createElement('tr');
+      if (t < p.history) tr.className = 'pre';
+      var cells = [qLabel(p, t).text, f(h.i, 2) + (h.qe > 0 ? ' + QE' : ''), f(h.pi, 2), f(h.u, 2), f(h.g, 2), f(h.Ee, 2), f(h.r, 2), f(h.S, 2)];
+      cells.forEach(function (c, j) {
+        var td = document.createElement(j === 0 ? 'th' : 'td');
+        if (j === 0) td.scope = 'row';
+        td.textContent = c; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  function setNews(n, when) {
+    $('newsHead').textContent = n.head;
+    $('newsDeck').textContent = n.deck;
+    $('newsDate').textContent = when;
+    var band = document.querySelector('.news');
+    band.classList.remove('flash'); void band.offsetWidth; band.classList.add('flash');
+  }
+
+  /* ------------------------------ end of game ------------------------------ */
+  function showEnd() {
+    var g = state.game, p = g.p;
+    var you = g.played(), taylor = g.counterfactual('taylor').slice(p.history), hold = g.counterfactual('hold').slice(p.history);
+    var s = M.score(p, you), sT = M.score(p, taylor), sH = M.score(p, hold);
+    var v = s.verdict;
+    $('endGrade').textContent = v.grade;
+    $('endGrade').classList.toggle('bad', !v.ok);
+    $('endTitle').textContent = v.title;
+    var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
+      'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
+    parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
+      : 'The President has decided to nominate someone else.');
+    $('endSummary').textContent = parts.join(' ');
+    var sc = g.scenario;
+    $('shockName').textContent = sc.name + (g.scenarioKey !== 'none' ? ' (hit in ' + qLabel(p, p.history + g.onset - 1).text + ')' : '');
+    $('shockKind').textContent = sc.kind + ': ' + sc.curve + '.';
+    $('shockBlurb').textContent = sc.blurb;
+    $('shockLesson').textContent = sc.lesson;
+
+    var labels = you.map(function (_, i) { return qLabel(p, p.history + i).text; });
+    var cmp = $('compare'); cmp.textContent = '';
+    [['pi', 'Inflation', p.piStar], ['u', 'Unemployment', p.uStar], ['i', 'Fed funds rate', null]].forEach(function (spec) {
+      var fig = document.createElement('figure');
+      var cap = document.createElement('figcaption'); cap.textContent = spec[1] + ' (%)';
+      var box = document.createElement('div'); box.className = 'chart';
+      fig.appendChild(cap); fig.appendChild(box); cmp.appendChild(fig);
+      fig._spec = spec;
+    });
+    var dlg = $('dlgEnd');
+    if (!dlg.open) dlg.showModal();
+    Array.prototype.forEach.call(cmp.children, function (fig) {
+      var spec = fig._spec;
+      C.compare(fig.querySelector('.chart'), { title: spec[1], key: spec[0], goal: spec[2], runs: { you: you, taylor: taylor, hold: hold }, labels: labels });
+    });
+
+    var tbl = $('scoreTable'); tbl.textContent = '';
+    var head = tbl.createTHead().insertRow();
+    ['Policy', 'Distance from goals', 'Inflation gap (RMS)', 'Unemployment gap (RMS)', 'Peak inflation', 'Peak unemployment', 'Grade'].forEach(function (h) {
+      var th = document.createElement('th'); th.scope = 'col'; th.textContent = h; head.appendChild(th);
+    });
+    var body = tbl.createTBody();
+    var best = Math.min(s.dist, sT.dist, sH.dist);
+    [['Your policy', s, you], ['Taylor rule', sT, taylor], ['Never change the rate', sH, hold]].forEach(function (row) {
+      var tr = body.insertRow();
+      var th = document.createElement('th'); th.scope = 'row'; th.textContent = row[0]; tr.appendChild(th);
+      var sc2 = row[1], recs = row[2];
+      var cells = [f(sc2.dist, 2), f(sc2.rmsPi, 2), f(sc2.rmsU, 2), f(max(recs, 'pi')) + '%', f(max(recs, 'u')) + '%', sc2.verdict.grade];
+      cells.forEach(function (c, j) { var td = tr.insertCell(); td.textContent = c; if (j === 0 && sc2.dist === best) td.className = 'best'; });
+    });
+    renderCharts();
+  }
+  function avg(a, k) { return a.reduce(function (s, r) { return s + r[k]; }, 0) / a.length; }
+  function max(a, k) { return Math.max.apply(null, a.map(function (r) { return r[k]; })); }
+
+  /* ------------------------------ demo mode ------------------------------ */
+  function startDemo() {
+    stopDemo();
+    state.demoTimer = setInterval(function () {
+      if (!state.game || state.game.done()) { stopDemo(); return; }
+      state.setting = state.game.last().set;
+      playQuarter();
+    }, 2200);
+    renderDecision();
+  }
+  function stopDemo() {
+    if (state.demoTimer) { clearInterval(state.demoTimer); state.demoTimer = null; }
+    if (state.game) renderDecision();
+  }
+
+  /* ------------------------------ data export ------------------------------ */
+  function tableRows() {
+    var g = state.game, p = g.p;
+    var rows = [['Quarter', 'Fed funds rate', 'QE (rate equivalent)', 'Inflation', 'Unemployment', 'Real GDP growth', 'Expected inflation', 'Real rate', 'Spending growth', 'Solow growth rate', 'Credibility']];
+    g.hist.forEach(function (h, t) {
+      rows.push([qLabel(p, t).text, f(h.i, 2), h.qe > 0 ? f(h.iEff, 2) : '', f(h.pi, 2), f(h.u, 2), f(h.g, 2), f(h.Ee, 2), f(h.r, 2), f(h.S, 2), f(h.gStar, 2), f(h.cred * 100, 0)]);
+    });
+    if (g.done()) { rows.push([]); rows.push(['Shock', g.scenario.name]); rows.push(['Seed', String(g.seed)]); }
+    return rows;
+  }
+  function copyTable() {
+    var text = tableRows().map(function (r) { return r.join('\t'); }).join('\n');
+    var msg = $('copyMsg');
+    var done = function () { msg.textContent = 'Copied. Paste into a spreadsheet.'; setTimeout(function () { msg.textContent = ''; }, 3000); };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e2) { msg.textContent = 'Select the table and copy it by hand.'; }
+      document.body.removeChild(ta);
+    }
+  }
+  function downloadCsv() {
+    var csv = tableRows().map(function (r) { return r.map(function (c) { return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'fed-game-' + state.game.seed + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    $('copyMsg').textContent = 'If no download started, use Copy table instead.';
+    setTimeout(function () { $('copyMsg').textContent = ''; }, 4000);
+  }
+
+  /* ------------------------------ dialogs ------------------------------ */
+  function fillParamTable() {
+    var p = state.game ? state.game.p : M.DEFAULTS, tb = $('paramTable').tBodies[0];
+    tb.textContent = '';
+    [
+      ['ḡ', p.gBar + '%', 'Normal Solow growth rate (LRAS)'],
+      ['π*', p.piStar + '%', 'Inflation goal'],
+      ['u*', p.uStar + '%', 'Natural rate of unemployment'],
+      ['r*', p.rStar + '%', 'Neutral real interest rate; neutral funds rate = r* + E(π)'],
+      ['κ', p.kappa, 'Slope of SRAS'],
+      ['α', p.alpha, 'Effect of the real-rate gap on spending growth'],
+      ['ω', p.omega, 'Share of the rate gap that reaches spending each quarter'],
+      ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
+      ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
+      ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
+      ['β', p.okun, "Okun's law coefficient"],
+      ['θ', p.theta, 'Share of a real shock that changes output per worker, not jobs'],
+      ['QE', p.qe ? 'on' : 'off', 'Each QE round works like a ' + (p.qeEff * p.step).toFixed(3) + '-point rate cut']
+    ].forEach(function (r) {
+      var tr = tb.insertRow();
+      r.forEach(function (c) { var td = tr.insertCell(); td.textContent = c; });
+    });
+  }
+
+  function fillSettings() {
+    var sel = $('setScenario');
+    if (!sel.options.length) {
+      var o = document.createElement('option'); o.value = 'random'; o.textContent = 'Random (students don\'t know)'; sel.appendChild(o);
+      M.SCENARIO_KEYS.concat(['none']).forEach(function (k) {
+        var op = document.createElement('option'); op.value = k; op.textContent = M.SCENARIOS[k].name + ' — ' + M.SCENARIOS[k].kind.toLowerCase();
+        sel.appendChild(op);
+      });
+    }
+    var o2 = state.opts, p = state.game.p;
+    sel.value = o2.scenario || 'random';
+    $('setOnset').value = o2.onset ? String(o2.onset) : '';
+    $('setSeed').value = o2.seed || '';
+    $('setQuarters').value = p.quarters;
+    $('setUstar').value = p.uStar;
+    $('setGbar').value = p.gBar;
+    $('setQE').checked = p.qe;
+    $('setDemo').checked = !!o2.demo;
+    updateShare();
+  }
+  function settingsFromForm() {
+    var seed = parseInt($('setSeed').value, 10);
+    var onset = parseInt($('setOnset').value, 10);
+    var params = {
+      quarters: clampInt($('setQuarters').value, 8, 40) || 16,
+      uStar: parseFloat($('setUstar').value) || M.DEFAULTS.uStar,
+      gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
+      qe: $('setQE').checked
+    };
+    return {
+      scenario: $('setScenario').value,
+      seed: isNaN(seed) ? undefined : seed,
+      onset: isNaN(onset) ? undefined : onset,
+      params: params,
+      demo: $('setDemo').checked
+    };
+  }
+  function updateShare() {
+    var o = settingsFromForm();
+    var q = new URLSearchParams();
+    if (o.scenario && o.scenario !== 'random') q.set('scenario', o.scenario);
+    q.set('seed', String(o.seed || state.game.seed));
+    if (o.onset) q.set('onset', o.onset);
+    if (o.params.quarters !== 16) q.set('quarters', o.params.quarters);
+    if (o.params.uStar !== M.DEFAULTS.uStar) q.set('ustar', o.params.uStar);
+    if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
+    if (!o.params.qe) q.set('qe', '0');
+    if (o.demo) q.set('demo', '1');
+    $('shareLink').textContent = '?' + q.toString();
+  }
+
+  /* ------------------------------ wiring ------------------------------ */
+  function wire() {
+    $('btnCut').addEventListener('click', function () { nudge(-1); });
+    $('btnRaise').addEventListener('click', function () { nudge(1); });
+    $('btnGo').addEventListener('click', playQuarter);
+    $('btnNew').addEventListener('click', function () { newGame({ params: state.opts.params }); });
+    $('btnHelp').addEventListener('click', function () { $('dlgHelp').showModal(); });
+    $('btnModel').addEventListener('click', function () { fillParamTable(); $('dlgModel').showModal(); });
+    $('btnSettings').addEventListener('click', function () { fillSettings(); $('dlgSettings').showModal(); });
+    $('settingsForm').addEventListener('input', updateShare);
+    $('btnCopy').addEventListener('click', copyTable);
+    $('btnCsv').addEventListener('click', downloadCsv);
+
+    $('dlgSettings').addEventListener('close', function () {
+      if ($('dlgSettings').returnValue === 'apply') newGame(settingsFromForm());
+    });
+    $('dlgEnd').addEventListener('close', function () {
+      var v = $('dlgEnd').returnValue;
+      C.hideTip();
+      if (v === 'new') newGame({ params: state.opts.params, scenario: state.opts.scenario, onset: state.opts.onset });
+      else if (v === 'replay') newGame({ params: state.opts.params, scenario: state.game.scenarioKey, onset: state.game.onset, seed: state.game.seed });
+    });
+    $('dlgEnd').addEventListener('cancel', function () { C.hideTip(); });
+
+    // After any dialog closes, put focus back on the main action so Enter keeps working.
+    ['dlgHelp', 'dlgModel', 'dlgSettings', 'dlgEnd'].forEach(function (id) {
+      $(id).addEventListener('close', function () {
+        setTimeout(function () {
+          if (document.querySelector('dialog[open]')) return;
+          var go = $('btnGo');
+          if (!go.disabled) go.focus({ preventScroll: true });
+          else document.activeElement && document.activeElement.blur && document.activeElement.blur();
+        }, 0);
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (document.querySelector('dialog[open]')) return;
+      var tag = (e.target && e.target.tagName) || '';
+      if (e.target && e.target.closest && e.target.closest('dialog')) tag = '';
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (e.key === 'ArrowUp') { e.preventDefault(); nudge(1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-1); }
+      else if (e.key === 'Enter' && tag !== 'BUTTON' && tag !== 'SUMMARY') { e.preventDefault(); playQuarter(); }
+    });
+
+    var rt = null;
+    var redraw = function () { clearTimeout(rt); rt = setTimeout(function () { if (state.game) { renderCharts(); if ($('dlgEnd').open) showEnd(); } }, 120); };
+    if (window.ResizeObserver) new ResizeObserver(redraw).observe($('tsChart').parentNode);
+    else window.addEventListener('resize', redraw);
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) mq.addEventListener('change', redraw);
+    }
+  }
+
+  wire();
+  var opts = readParams();
+  newGame(opts);
+  if (!opts.demo) {
+    var seen = false;
+    try { seen = sessionStorage.getItem('fedgame-help') === '1'; sessionStorage.setItem('fedgame-help', '1'); } catch (e) { seen = false; }
+    if (!seen) $('dlgHelp').showModal();
+  }
+})();
+</script>
+<!-- /build:body -->
+</body>
+</html>

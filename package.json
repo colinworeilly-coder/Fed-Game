@@ -1,0 +1,11 @@
+{
+  "name": "fed-game",
+  "version": "1.0.0",
+  "description": "A classroom monetary policy game built on the Cowen-Tabarrok dynamic AD-AS model.",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node tools/build.js"
+  },
+  "license": "MIT"
+}
