@@ -44,10 +44,24 @@
     if (q.get('ustar')) params.uStar = parseFloat(q.get('ustar'));
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
+    if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
     return o;
   }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // Plain-language description of the policy-lag setting.
+  function lagText(p) {
+    var s = M.lagSummary(p);
+    var speed = 'Half of a rate change is felt after about ' + plural(s.half, 'quarter') +
+      ', and 90% after about ' + plural(s.most, 'quarter') + '.';
+    var vary = p.lagVar <= 0 ? ' The timing is predictable.'
+      : ' The timing is uncertain: some quarters policy bites faster, some slower' +
+        (p.lagVar >= 0.7 ? ', by a wide margin.' : p.lagVar >= 0.5 ? ', often by a lot.' : '.');
+    return { name: M.LAG_PRESETS[p.lags].name, speed: speed, vary: vary, all: speed + vary };
+  }
+
   function clampInt(v, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? undefined : Math.max(lo, Math.min(hi, v)); }
 
   /* ----------------------------- new game ----------------------------- */
@@ -65,6 +79,10 @@
     document.querySelectorAll('.neutralI').forEach(function (n) { n.textContent = f(p.rStar + p.piStar, 0) + '%'; });
     $('noteGoalPi').textContent = f(p.piStar, 0) + '%';
     $('noteGoalU').textContent = f(p.uStar, 1) + '%';
+    var lt = lagText(p);
+    $('lagHelp').textContent = lt.all;
+    $('lagNote').hidden = p.lags === M.DEFAULTS.lags;
+    $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
     setNews({
       head: 'New Fed chair takes office as the economy grows at a steady pace',
       deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%. Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
@@ -281,6 +299,7 @@
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
+    if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
     $('endSummary').textContent = parts.join(' ');
@@ -384,7 +403,9 @@
       ['r*', p.rStar + '%', 'Neutral real interest rate; neutral funds rate = r* + E(π)'],
       ['κ', p.kappa, 'Slope of SRAS'],
       ['α', p.alpha, 'Effect of the real-rate gap on spending growth'],
-      ['ω', p.omega, 'Share of the rate gap that reaches spending each quarter'],
+      ['ω', p.omega, 'Average share of the rate gap passed through each stage per quarter'],
+      ['k', p.lagStages, 'Number of lag stages (policy-lag setting: ' + M.LAG_PRESETS[p.lags].name.toLowerCase() + ')'],
+      ['σ', p.lagVar, 'Variability of the lag: s.d. of the log of ω each quarter (0 = predictable)'],
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
@@ -414,6 +435,7 @@
     $('setUstar').value = p.uStar;
     $('setGbar').value = p.gBar;
     $('setQE').checked = p.qe;
+    $('setLags').value = p.lags;
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -424,7 +446,8 @@
       quarters: clampInt($('setQuarters').value, 8, 40) || 16,
       uStar: parseFloat($('setUstar').value) || M.DEFAULTS.uStar,
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
-      qe: $('setQE').checked
+      qe: $('setQE').checked,
+      lags: parseInt($('setLags').value, 10)
     };
     return {
       scenario: $('setScenario').value,
@@ -444,6 +467,11 @@
     if (o.params.uStar !== M.DEFAULTS.uStar) q.set('ustar', o.params.uStar);
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
+    if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
+    var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
+    out.textContent = '';
+    var b = document.createElement('b'); b.textContent = lt.name + '. ';
+    out.appendChild(b); out.appendChild(document.createTextNode(lt.all));
     if (o.demo) q.set('demo', '1');
     $('shareLink').textContent = '?' + q.toString();
   }
@@ -455,7 +483,11 @@
     $('btnGo').addEventListener('click', playQuarter);
     $('btnNew').addEventListener('click', function () { newGame({ params: state.opts.params }); });
     $('btnHelp').addEventListener('click', function () { $('dlgHelp').showModal(); });
-    $('btnModel').addEventListener('click', function () { fillParamTable(); $('dlgModel').showModal(); });
+    $('btnModel').addEventListener('click', function () {
+      fillParamTable();
+      $('lagModel').textContent = 'In this game: ' + lagText(state.game.p).all;
+      $('dlgModel').showModal();
+    });
     $('btnSettings').addEventListener('click', function () { fillSettings(); $('dlgSettings').showModal(); });
     $('settingsForm').addEventListener('input', updateShare);
     $('btnCopy').addEventListener('click', copyTable);

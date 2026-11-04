@@ -8,7 +8,10 @@
  *
  *   AD    :  pi_t + g_t = S_t                         (spending growth = M~ + v~)
  *   Spend :  S_t = Ee_t + gBar - alpha*m_t + gamma*(u_{t-1} - uStar) + d_t
- *   Lag   :  m_t = (1-omega)*m_{t-1} + omega*(i_t - Ee_t - rStar)
+ *   Lag   :  m_t = (1-w_t)*m_{t-1} + w_t*(i_t - Ee_t - rStar), applied in
+ *            lagStages successive stages (more stages = longer, hump-shaped
+ *            lag); w_t = omega, or omega times a random factor when lags
+ *            are variable (lagVar > 0).
  *   LRAS  :  gStar_t = gBar + z_t                       (Solow growth rate)
  *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + c_t
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
@@ -35,7 +38,10 @@
     rStar: 2.0,     // neutral real interest rate, %
     kappa: 0.5,     // SRAS slope: extra inflation per point of growth above Solow
     alpha: 1.0,     // spending-growth response to the real-rate gap
-    omega: 0.5,     // speed at which a rate change reaches spending (per quarter)
+    lags: 1,        // policy-lag setting, 0 (short) to 4 (long and variable); sets the next three
+    omega: 0.5,     // speed at which a rate change reaches spending (per quarter, per stage)
+    lagStages: 1,   // number of stages the rate change passes through
+    lagVar: 0,      // variability of the lag: s.d. of the log of the quarterly speed
     gamma: 0.6,     // self-correction: slack slowly revives spending
     okun: 0.5,      // Okun's law coefficient
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
@@ -54,6 +60,36 @@
     noiseZ: 0.25,   // s.d. of LRAS noise
     noiseC: 0.2     // s.d. of price noise
   };
+
+  // Policy-lag settings for the instructor slider. Level 1 is the default.
+  var LAG_PRESETS = [
+    { name: 'Short and predictable', omega: 0.8, lagStages: 1, lagVar: 0 },
+    { name: 'Moderate and predictable', omega: 0.5, lagStages: 1, lagVar: 0 },
+    { name: 'Longer and somewhat variable', omega: 0.5, lagStages: 2, lagVar: 0.35 },
+    { name: 'Long and variable', omega: 0.35, lagStages: 2, lagVar: 0.55 },
+    { name: 'Very long and variable', omega: 0.35, lagStages: 3, lagVar: 0.75 }
+  ];
+
+  // Share of a permanent change in the real rate that has reached spending
+  // after each quarter, at the average speed (no randomness).
+  function lagProfile(p, quarters) {
+    var ms = [], out = [];
+    for (var j = 0; j < p.lagStages; j++) ms.push(0);
+    for (var q = 0; q < (quarters || 16); q++) {
+      var input = 1;
+      for (j = 0; j < p.lagStages; j++) { ms[j] = (1 - p.omega) * ms[j] + p.omega * input; input = ms[j]; }
+      out.push(input);
+    }
+    return out;
+  }
+  function lagSummary(p) {
+    var prof = lagProfile(p, 40), half = 0, most = 0;
+    for (var q = 0; q < prof.length; q++) {
+      if (!half && prof[q] >= 0.5) half = q + 1;
+      if (!most && prof[q] >= 0.9) most = q + 1;
+    }
+    return { half: half, most: most, mean: p.lagStages * (1 - p.omega) / p.omega, variable: p.lagVar > 0 };
+  }
 
   /* ---------------- random numbers (seeded, reproducible) ---------------- */
 
@@ -191,6 +227,12 @@
     var p = {}, k;
     for (k in DEFAULTS) p[k] = DEFAULTS[k];
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
+    // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
+    p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    var pre = LAG_PRESETS[p.lags];
+    ['omega', 'lagStages', 'lagVar'].forEach(function (k2) {
+      if (!over || over[k2] === undefined || over[k2] === null) p[k2] = pre[k2];
+    });
     return p;
   }
 
@@ -205,6 +247,10 @@
       dn = p.rhoD * dn + p.noiseD * gaussian(rand);
       raw.push({ dn: dn, zn: p.noiseZ * gaussian(rand), cn: p.noiseC * gaussian(rand) });
     }
+    // Lag surprises come from a separate stream so that the lag setting does
+    // not change the economy a given seed produces.
+    var lr = mulberry32((seed ^ 0x5bd1e995) >>> 0), lagRand = [];
+    for (t = 0; t < n; t++) lagRand.push(gaussian(lr));
     var key = scenarioKey;
     if (!key || key === 'random') key = SCENARIO_KEYS[Math.floor(rand() * SCENARIO_KEYS.length)];
     if (!SCENARIOS[key]) key = 'none';
@@ -219,7 +265,7 @@
         if (sc.z) z += sc.z(k);
         if (sc.c) c += sc.c(k);
       }
-      return { d: d, z: z, c: c };
+      return { d: d, z: z, c: c, lag: lagRand[t] };
     });
     return { key: key, onset: onset, shocks: shocks };
   }
@@ -242,7 +288,17 @@
     var iEff = i - p.qeEff * qe;
     var Ee = prev.EeNext !== undefined ? prev.EeNext : prev.Ee;
     var rgap = iEff - Ee - p.rStar;
-    var m = (1 - p.omega) * prev.m + p.omega * rgap;
+    // Policy lag: the real-rate gap passes through lagStages smoothing
+    // stages. With variable lags the speed w differs from quarter to quarter.
+    var w = p.omega;
+    if (p.lagVar > 0) w = clamp(p.omega * Math.exp(p.lagVar * (sh.lag || 0) - p.lagVar * p.lagVar / 2), 0.05, 0.95);
+    var ms = [], input = rgap;
+    for (var j = 0; j < p.lagStages; j++) {
+      var before = prev.ms ? prev.ms[j] : (j === p.lagStages - 1 ? prev.m || 0 : 0);
+      ms.push((1 - w) * before + w * input);
+      input = ms[j];
+    }
+    var m = input;
     var gStar = p.gBar + sh.z;
     var S = Ee + p.gBar - p.alpha * m + p.gamma * (prev.u - p.uStar) + sh.d;
     // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + c)
@@ -254,7 +310,7 @@
     var a = p.anchor * cred;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
-      set: set, i: i, qe: qe, iEff: iEff, m: m, Ee: Ee, EeNext: EeNext, S: S, g: g,
+      set: set, i: i, qe: qe, iEff: iEff, m: m, ms: ms, w: w, rgap: rgap, Ee: Ee, EeNext: EeNext, S: S, g: g,
       gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c
     };
   }
@@ -346,6 +402,7 @@
 
   var api = {
     DEFAULTS: DEFAULTS, SCENARIOS: SCENARIOS, SCENARIO_KEYS: SCENARIO_KEYS, RULES: RULES,
+    LAG_PRESETS: LAG_PRESETS, lagProfile: lagProfile, lagSummary: lagSummary,
     Game: Game, step: step, score: score, verdict: verdict, mergeParams: mergeParams,
     mulberry32: mulberry32, roundStep: roundStep
   };

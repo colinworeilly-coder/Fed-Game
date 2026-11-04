@@ -56,6 +56,10 @@ Suggested assignment of shocks:
   inflation and unemployment on target? Which goal did you prioritize?
 * **Credibility.** What happened to the credibility meter when inflation stayed
   high? How did that change the cost of bringing inflation down?
+* **Long and variable lags.** Play the same seed and shock twice, once with
+  the **Policy lags** slider at the default and once at *Long and variable*.
+  How did you change your strategy? Did you overshoot because the first moves
+  seemed to do nothing?
 * **Rules vs. discretion.** Did you beat the Taylor rule? In which shocks did
   discretion help, and where did the rule do better?
 * **The zero lower bound.** In the financial crisis, what happened when the
@@ -84,4 +88,5 @@ Suggested assignment of shocks:
 | `ustar` | `5` | Natural rate of unemployment |
 | `gbar` | `2.5` | Solow growth rate |
 | `qe` | `0` | Disable quantitative easing |
+| `lags` | `3` | Policy lags, from `0` (short and predictable) to `4` (very long and variable); default `1` |
 | `demo` | `1` | Classroom demo: hold the rate and auto-play |

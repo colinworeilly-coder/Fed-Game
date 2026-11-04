@@ -386,6 +386,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
   padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font-weight: 400;
 }
 #shareLink { word-break: break-all; }
+.range-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+.range-field label { font-size: var(--fs-s); color: var(--ink-2); font-weight: 600; }
+.range-field input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
+.range-ends { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--muted); }
+.range-field output { font-size: var(--fs-s); color: var(--ink); }
+.range-field output b { font-weight: 700; }
+.lag-note { font-size: var(--fs-xs); color: var(--ink-2); text-align: center; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); }
 
 .verdict { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
 .grade {
@@ -512,6 +519,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         </div>
         <button type="button" class="btn primary go" id="btnGo">Set rate and run the quarter</button>
         <p class="hint">Keys: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the rate, <kbd>Enter</kbd> runs the quarter.</p>
+        <p class="lag-note" id="lagNote" hidden></p>
       </section>
 
       <section class="card stats" aria-labelledby="statsTitle">
@@ -583,7 +591,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       </div>
       <div>
         <h3>The catch</h3>
-        <p>Rate changes take a few quarters to work through spending. Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
+        <p>Rate changes take time to work through spending. <span id="lagHelp">About half of a change is felt in the first quarter.</span> Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
       </div>
       <div>
         <h3>Real rates matter</h3>
@@ -604,7 +612,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     <div class="eq-list">
       <div class="eq"><span class="eq-name">Aggregate demand</span><code>&pi; + g = S</code><p>Spending growth <i>S</i> = <i>M&#771;</i> + <i>v&#771;</i> must be split between inflation &pi; and real growth <i>g</i>. AD is a line with slope &minus;1.</p></div>
       <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
-      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;)&middot;m<sub>&minus;1</sub> + &omega;&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually. About half of a rate change bites in the first quarter.</p></div>
+      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;<sub>t</sub>)&middot;m<sub>&minus;1</sub> + &omega;<sub>t</sub>&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually, passing through <i>k</i> such stages; more stages give a longer, hump-shaped lag. With variable lags the speed &omega;<sub>t</sub> is random each quarter, so the same move can bite fast or slow. <span id="lagModel"></span></p></div>
       <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
       <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
       <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
@@ -641,6 +649,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       <label for="setGbar">Solow growth rate (%)
         <input id="setGbar" type="number" min="0" max="6" step="0.1" value="3">
       </label>
+      <div class="range-field">
+        <label for="setLags">Policy lags</label>
+        <input id="setLags" type="range" min="0" max="4" step="1" value="1" list="lagTicks" aria-describedby="lagOut">
+        <datalist id="lagTicks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
+        <div class="range-ends" aria-hidden="true"><span>Short and predictable</span><span>Long and variable</span></div>
+        <output id="lagOut" for="setLags"></output>
+      </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
       <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>
     </div>
@@ -699,7 +714,10 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
  *
  *   AD    :  pi_t + g_t = S_t                         (spending growth = M~ + v~)
  *   Spend :  S_t = Ee_t + gBar - alpha*m_t + gamma*(u_{t-1} - uStar) + d_t
- *   Lag   :  m_t = (1-omega)*m_{t-1} + omega*(i_t - Ee_t - rStar)
+ *   Lag   :  m_t = (1-w_t)*m_{t-1} + w_t*(i_t - Ee_t - rStar), applied in
+ *            lagStages successive stages (more stages = longer, hump-shaped
+ *            lag); w_t = omega, or omega times a random factor when lags
+ *            are variable (lagVar > 0).
  *   LRAS  :  gStar_t = gBar + z_t                       (Solow growth rate)
  *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + c_t
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
@@ -726,7 +744,10 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     rStar: 2.0,     // neutral real interest rate, %
     kappa: 0.5,     // SRAS slope: extra inflation per point of growth above Solow
     alpha: 1.0,     // spending-growth response to the real-rate gap
-    omega: 0.5,     // speed at which a rate change reaches spending (per quarter)
+    lags: 1,        // policy-lag setting, 0 (short) to 4 (long and variable); sets the next three
+    omega: 0.5,     // speed at which a rate change reaches spending (per quarter, per stage)
+    lagStages: 1,   // number of stages the rate change passes through
+    lagVar: 0,      // variability of the lag: s.d. of the log of the quarterly speed
     gamma: 0.6,     // self-correction: slack slowly revives spending
     okun: 0.5,      // Okun's law coefficient
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
@@ -745,6 +766,36 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     noiseZ: 0.25,   // s.d. of LRAS noise
     noiseC: 0.2     // s.d. of price noise
   };
+
+  // Policy-lag settings for the instructor slider. Level 1 is the default.
+  var LAG_PRESETS = [
+    { name: 'Short and predictable', omega: 0.8, lagStages: 1, lagVar: 0 },
+    { name: 'Moderate and predictable', omega: 0.5, lagStages: 1, lagVar: 0 },
+    { name: 'Longer and somewhat variable', omega: 0.5, lagStages: 2, lagVar: 0.35 },
+    { name: 'Long and variable', omega: 0.35, lagStages: 2, lagVar: 0.55 },
+    { name: 'Very long and variable', omega: 0.35, lagStages: 3, lagVar: 0.75 }
+  ];
+
+  // Share of a permanent change in the real rate that has reached spending
+  // after each quarter, at the average speed (no randomness).
+  function lagProfile(p, quarters) {
+    var ms = [], out = [];
+    for (var j = 0; j < p.lagStages; j++) ms.push(0);
+    for (var q = 0; q < (quarters || 16); q++) {
+      var input = 1;
+      for (j = 0; j < p.lagStages; j++) { ms[j] = (1 - p.omega) * ms[j] + p.omega * input; input = ms[j]; }
+      out.push(input);
+    }
+    return out;
+  }
+  function lagSummary(p) {
+    var prof = lagProfile(p, 40), half = 0, most = 0;
+    for (var q = 0; q < prof.length; q++) {
+      if (!half && prof[q] >= 0.5) half = q + 1;
+      if (!most && prof[q] >= 0.9) most = q + 1;
+    }
+    return { half: half, most: most, mean: p.lagStages * (1 - p.omega) / p.omega, variable: p.lagVar > 0 };
+  }
 
   /* ---------------- random numbers (seeded, reproducible) ---------------- */
 
@@ -882,6 +933,12 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var p = {}, k;
     for (k in DEFAULTS) p[k] = DEFAULTS[k];
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
+    // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
+    p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    var pre = LAG_PRESETS[p.lags];
+    ['omega', 'lagStages', 'lagVar'].forEach(function (k2) {
+      if (!over || over[k2] === undefined || over[k2] === null) p[k2] = pre[k2];
+    });
     return p;
   }
 
@@ -896,6 +953,10 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       dn = p.rhoD * dn + p.noiseD * gaussian(rand);
       raw.push({ dn: dn, zn: p.noiseZ * gaussian(rand), cn: p.noiseC * gaussian(rand) });
     }
+    // Lag surprises come from a separate stream so that the lag setting does
+    // not change the economy a given seed produces.
+    var lr = mulberry32((seed ^ 0x5bd1e995) >>> 0), lagRand = [];
+    for (t = 0; t < n; t++) lagRand.push(gaussian(lr));
     var key = scenarioKey;
     if (!key || key === 'random') key = SCENARIO_KEYS[Math.floor(rand() * SCENARIO_KEYS.length)];
     if (!SCENARIOS[key]) key = 'none';
@@ -910,7 +971,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         if (sc.z) z += sc.z(k);
         if (sc.c) c += sc.c(k);
       }
-      return { d: d, z: z, c: c };
+      return { d: d, z: z, c: c, lag: lagRand[t] };
     });
     return { key: key, onset: onset, shocks: shocks };
   }
@@ -933,7 +994,17 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var iEff = i - p.qeEff * qe;
     var Ee = prev.EeNext !== undefined ? prev.EeNext : prev.Ee;
     var rgap = iEff - Ee - p.rStar;
-    var m = (1 - p.omega) * prev.m + p.omega * rgap;
+    // Policy lag: the real-rate gap passes through lagStages smoothing
+    // stages. With variable lags the speed w differs from quarter to quarter.
+    var w = p.omega;
+    if (p.lagVar > 0) w = clamp(p.omega * Math.exp(p.lagVar * (sh.lag || 0) - p.lagVar * p.lagVar / 2), 0.05, 0.95);
+    var ms = [], input = rgap;
+    for (var j = 0; j < p.lagStages; j++) {
+      var before = prev.ms ? prev.ms[j] : (j === p.lagStages - 1 ? prev.m || 0 : 0);
+      ms.push((1 - w) * before + w * input);
+      input = ms[j];
+    }
+    var m = input;
     var gStar = p.gBar + sh.z;
     var S = Ee + p.gBar - p.alpha * m + p.gamma * (prev.u - p.uStar) + sh.d;
     // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + c)
@@ -945,7 +1016,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var a = p.anchor * cred;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
-      set: set, i: i, qe: qe, iEff: iEff, m: m, Ee: Ee, EeNext: EeNext, S: S, g: g,
+      set: set, i: i, qe: qe, iEff: iEff, m: m, ms: ms, w: w, rgap: rgap, Ee: Ee, EeNext: EeNext, S: S, g: g,
       gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c
     };
   }
@@ -1037,6 +1108,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 
   var api = {
     DEFAULTS: DEFAULTS, SCENARIOS: SCENARIOS, SCENARIO_KEYS: SCENARIO_KEYS, RULES: RULES,
+    LAG_PRESETS: LAG_PRESETS, lagProfile: lagProfile, lagSummary: lagSummary,
     Game: Game, step: step, score: score, verdict: verdict, mergeParams: mergeParams,
     mulberry32: mulberry32, roundStep: roundStep
   };
@@ -1530,10 +1602,24 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (q.get('ustar')) params.uStar = parseFloat(q.get('ustar'));
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
+    if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
     return o;
   }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // Plain-language description of the policy-lag setting.
+  function lagText(p) {
+    var s = M.lagSummary(p);
+    var speed = 'Half of a rate change is felt after about ' + plural(s.half, 'quarter') +
+      ', and 90% after about ' + plural(s.most, 'quarter') + '.';
+    var vary = p.lagVar <= 0 ? ' The timing is predictable.'
+      : ' The timing is uncertain: some quarters policy bites faster, some slower' +
+        (p.lagVar >= 0.7 ? ', by a wide margin.' : p.lagVar >= 0.5 ? ', often by a lot.' : '.');
+    return { name: M.LAG_PRESETS[p.lags].name, speed: speed, vary: vary, all: speed + vary };
+  }
+
   function clampInt(v, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? undefined : Math.max(lo, Math.min(hi, v)); }
 
   /* ----------------------------- new game ----------------------------- */
@@ -1551,6 +1637,10 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     document.querySelectorAll('.neutralI').forEach(function (n) { n.textContent = f(p.rStar + p.piStar, 0) + '%'; });
     $('noteGoalPi').textContent = f(p.piStar, 0) + '%';
     $('noteGoalU').textContent = f(p.uStar, 1) + '%';
+    var lt = lagText(p);
+    $('lagHelp').textContent = lt.all;
+    $('lagNote').hidden = p.lags === M.DEFAULTS.lags;
+    $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
     setNews({
       head: 'New Fed chair takes office as the economy grows at a steady pace',
       deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%. Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
@@ -1767,6 +1857,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
+    if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
     $('endSummary').textContent = parts.join(' ');
@@ -1870,7 +1961,9 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       ['r*', p.rStar + '%', 'Neutral real interest rate; neutral funds rate = r* + E(π)'],
       ['κ', p.kappa, 'Slope of SRAS'],
       ['α', p.alpha, 'Effect of the real-rate gap on spending growth'],
-      ['ω', p.omega, 'Share of the rate gap that reaches spending each quarter'],
+      ['ω', p.omega, 'Average share of the rate gap passed through each stage per quarter'],
+      ['k', p.lagStages, 'Number of lag stages (policy-lag setting: ' + M.LAG_PRESETS[p.lags].name.toLowerCase() + ')'],
+      ['σ', p.lagVar, 'Variability of the lag: s.d. of the log of ω each quarter (0 = predictable)'],
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
@@ -1900,6 +1993,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('setUstar').value = p.uStar;
     $('setGbar').value = p.gBar;
     $('setQE').checked = p.qe;
+    $('setLags').value = p.lags;
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -1910,7 +2004,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       quarters: clampInt($('setQuarters').value, 8, 40) || 16,
       uStar: parseFloat($('setUstar').value) || M.DEFAULTS.uStar,
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
-      qe: $('setQE').checked
+      qe: $('setQE').checked,
+      lags: parseInt($('setLags').value, 10)
     };
     return {
       scenario: $('setScenario').value,
@@ -1930,6 +2025,11 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (o.params.uStar !== M.DEFAULTS.uStar) q.set('ustar', o.params.uStar);
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
+    if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
+    var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
+    out.textContent = '';
+    var b = document.createElement('b'); b.textContent = lt.name + '. ';
+    out.appendChild(b); out.appendChild(document.createTextNode(lt.all));
     if (o.demo) q.set('demo', '1');
     $('shareLink').textContent = '?' + q.toString();
   }
@@ -1941,7 +2041,11 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('btnGo').addEventListener('click', playQuarter);
     $('btnNew').addEventListener('click', function () { newGame({ params: state.opts.params }); });
     $('btnHelp').addEventListener('click', function () { $('dlgHelp').showModal(); });
-    $('btnModel').addEventListener('click', function () { fillParamTable(); $('dlgModel').showModal(); });
+    $('btnModel').addEventListener('click', function () {
+      fillParamTable();
+      $('lagModel').textContent = 'In this game: ' + lagText(state.game.p).all;
+      $('dlgModel').showModal();
+    });
     $('btnSettings').addEventListener('click', function () { fillSettings(); $('dlgSettings').showModal(); });
     $('settingsForm').addEventListener('input', updateShare);
     $('btnCopy').addEventListener('click', copyTable);

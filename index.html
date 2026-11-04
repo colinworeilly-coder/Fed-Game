@@ -79,6 +79,7 @@
         </div>
         <button type="button" class="btn primary go" id="btnGo">Set rate and run the quarter</button>
         <p class="hint">Keys: <kbd>&uarr;</kbd> <kbd>&darr;</kbd> change the rate, <kbd>Enter</kbd> runs the quarter.</p>
+        <p class="lag-note" id="lagNote" hidden></p>
       </section>
 
       <section class="card stats" aria-labelledby="statsTitle">
@@ -150,7 +151,7 @@
       </div>
       <div>
         <h3>The catch</h3>
-        <p>Rate changes take a few quarters to work through spending. Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
+        <p>Rate changes take time to work through spending. <span id="lagHelp">About half of a change is felt in the first quarter.</span> Somewhere in your term the economy will be hit by a shock. You won't be told what it is; read the news and the data. Some shocks shift AD, others shift LRAS.</p>
       </div>
       <div>
         <h3>Real rates matter</h3>
@@ -171,7 +172,7 @@
     <div class="eq-list">
       <div class="eq"><span class="eq-name">Aggregate demand</span><code>&pi; + g = S</code><p>Spending growth <i>S</i> = <i>M&#771;</i> + <i>v&#771;</i> must be split between inflation &pi; and real growth <i>g</i>. AD is a line with slope &minus;1.</p></div>
       <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
-      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;)&middot;m<sub>&minus;1</sub> + &omega;&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually. About half of a rate change bites in the first quarter.</p></div>
+      <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;<sub>t</sub>)&middot;m<sub>&minus;1</sub> + &omega;<sub>t</sub>&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually, passing through <i>k</i> such stages; more stages give a longer, hump-shaped lag. With variable lags the speed &omega;<sub>t</sub> is random each quarter, so the same move can bite fast or slow. <span id="lagModel"></span></p></div>
       <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
       <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
       <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
@@ -208,6 +209,13 @@
       <label for="setGbar">Solow growth rate (%)
         <input id="setGbar" type="number" min="0" max="6" step="0.1" value="3">
       </label>
+      <div class="range-field">
+        <label for="setLags">Policy lags</label>
+        <input id="setLags" type="range" min="0" max="4" step="1" value="1" list="lagTicks" aria-describedby="lagOut">
+        <datalist id="lagTicks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
+        <div class="range-ends" aria-hidden="true"><span>Short and predictable</span><span>Long and variable</span></div>
+        <output id="lagOut" for="setLags"></output>
+      </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
       <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>
     </div>

@@ -99,3 +99,44 @@ test('every scenario produces headlines', () => {
     }
   }
 });
+
+test('policy-lag setting: default level keeps the single-stage lag', () => {
+  const p = M.mergeParams({});
+  assert.equal(p.lags, 1); assert.equal(p.lagStages, 1); assert.equal(p.omega, 0.5); assert.equal(p.lagVar, 0);
+  const q = M.mergeParams({ lags: 4, omega: 0.6 });
+  assert.equal(q.omega, 0.6, 'an explicit omega overrides the preset');
+  assert.equal(q.lagStages, M.LAG_PRESETS[4].lagStages);
+});
+
+test('higher lag settings delay the effect of a rate change', () => {
+  let lastHalf = 0, lastFirst = Infinity;
+  for (let L = 0; L < M.LAG_PRESETS.length; L++) {
+    const p = M.mergeParams({ lags: L });
+    const s = M.lagSummary(p);
+    assert.ok(s.half >= lastHalf, `level ${L}: half-life should not shrink`);
+    lastHalf = s.half;
+    // Same hike, no noise and no lag randomness: first-quarter bite gets smaller.
+    const g = new M.Game({ seed: 2, scenario: 'none', params: Object.assign({ lags: L, lagVar: 0 }, quiet) });
+    g.play(6);
+    const bite = (g.p.piStar + g.p.gBar) - g.last().S;
+    assert.ok(bite > 0 && bite <= lastFirst + 1e-12, `level ${L}: first-quarter effect should shrink`);
+    lastFirst = bite;
+    // The full effect eventually arrives.
+    const prof = M.lagProfile(p, 60);
+    close(prof[59], 1, 1e-3);
+  }
+  assert.ok(lastHalf >= 5, 'the longest setting takes over a year to reach half its effect');
+});
+
+test('variable lags are random but reproducible, and do not change the shocks', () => {
+  const a = new M.Game({ seed: 77, scenario: 'fear', params: { lags: 3 } });
+  const b = new M.Game({ seed: 77, scenario: 'fear', params: { lags: 3 } });
+  const c = new M.Game({ seed: 77, scenario: 'fear', params: { lags: 1 } });
+  for (let q = 0; q < 16; q++) { a.play(2); b.play(2); c.play(2); }
+  assert.deepEqual(a.hist, b.hist);
+  const speeds = a.played().map(r => r.w);
+  assert.ok(Math.max(...speeds) - Math.min(...speeds) > 0.1, 'speed should vary from quarter to quarter');
+  assert.ok(c.played().every(r => r.w === 0.5), 'predictable lags have a constant speed');
+  a.shocks.forEach((sh, t) => { assert.equal(sh.d, c.shocks[t].d); assert.equal(sh.z, c.shocks[t].z); });
+  assert.equal(a.scenarioKey, c.scenarioKey); assert.equal(a.onset, c.onset);
+});

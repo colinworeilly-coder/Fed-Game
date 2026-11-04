@@ -23,7 +23,7 @@ annualized. The code is in [`js/model.js`](../js/model.js).
 |---|---|---|
 | Aggregate demand | π<sub>t</sub> + g<sub>t</sub> = S<sub>t</sub> | AD: inflation + real growth = M̃ + ṽ. A line with slope −1 in (g, π) space. |
 | Spending growth | S<sub>t</sub> = E<sub>t</sub>π + ḡ − α·m<sub>t</sub> + γ·(u<sub>t−1</sub> − u\*) + d<sub>t</sub> | What shifts AD: monetary policy (via m), confidence, wealth, taxes, government spending, net exports (via d). |
-| Policy transmission | m<sub>t</sub> = (1 − ω)·m<sub>t−1</sub> + ω·(i<sup>eff</sup><sub>t</sub> − E<sub>t</sub>π − r\*) | "Uncertain lags": the real-rate gap reaches spending gradually. |
+| Policy transmission | m<sub>t</sub> = (1 − ω<sub>t</sub>)·m<sub>t−1</sub> + ω<sub>t</sub>·(i<sup>eff</sup><sub>t</sub> − E<sub>t</sub>π − r\*), passed through k stages | "Uncertain lags": the real-rate gap reaches spending gradually, and with variable lags at an uncertain speed. See [Policy lags](#policy-lags). |
 | Long-run aggregate supply | g\*<sub>t</sub> = ḡ + z<sub>t</sub> | LRAS is vertical at the Solow growth rate; real shocks z move it. |
 | Short-run aggregate supply | π<sub>t</sub> = E<sub>t</sub>π + κ·(g<sub>t</sub> − g\*<sub>t</sub>) + c<sub>t</sub> | SRAS passes through LRAS at expected inflation; sticky wages and prices give it a positive slope. c is a cost shock (shifts SRAS). |
 | Expectations | E<sub>t+1</sub>π = (1 − a<sub>t</sub>)·[E<sub>t</sub>π + λ·(π<sub>t</sub> − E<sub>t</sub>π)] + a<sub>t</sub>·π\* | Expectations adjust toward actual inflation ("eventually inflation expectations adjust"). A credible Fed anchors them. |
@@ -75,7 +75,9 @@ increases in inflation and increases in real growth."
 | r\* | 2.0% | Neutral real rate; neutral funds rate is about 4% when E(π) = 2% |
 | κ | 0.5 | SRAS slope |
 | α | 1.0 | Spending-growth response to the real-rate gap |
-| ω | 0.5 | Share of the gap passed through each quarter |
+| ω | 0.5 | Share of the gap passed through each stage per quarter (set by the lag slider) |
+| k | 1 | Number of lag stages (set by the lag slider) |
+| σ | 0 | Variability of the lag (set by the lag slider) |
 | γ | 0.6 | Self-correction of spending to unemployment slack |
 | λ | 0.3 | Adaptive-expectations speed per quarter |
 | anchor | 0.12 | Maximum quarterly pull of expectations toward π\* |
@@ -88,6 +90,39 @@ Small random disturbances hit AD (an AR(1) with persistence 0.5, s.d. 0.5),
 LRAS (s.d. 0.25) and SRAS (s.d. 0.2) every quarter. Instructors can change the
 natural rate, the Solow rate, the term length and the QE option from the
 **Instructor** panel or the URL.
+
+## Policy lags
+
+The **Policy lags** slider in the Instructor panel (URL parameter `lags=0…4`)
+sets how long monetary policy takes to work and how predictable that timing
+is, in the spirit of Friedman's "long and variable lags" and C&T's warning that
+the Fed's control is "subject to uncertain lags."
+
+*Length.* The real-rate gap passes through k first-order smoothing stages, each
+with speed ω. With one stage the effect starts at once and decays
+geometrically; with two or three stages the response is hump-shaped and builds
+over several quarters. The mean lag is k(1 − ω)/ω quarters.
+
+*Variability.* Each quarter the speed is ω<sub>t</sub> = ω·exp(σε<sub>t</sub> −
+σ²/2), with ε<sub>t</sub> ~ N(0,1), clipped to [0.05, 0.95]. The same rate
+move can therefore bite quickly in one game and slowly in another. The lag
+draws come from their own random stream, so changing the slider does not
+change the shocks a given seed produces, and the end-of-game benchmarks face
+the same lag draws as the player.
+
+| Level | Setting | k | ω | σ | Half of effect after | 90% after | AD shocks: never change (median) | AD shocks: Taylor rule (median) | Taylor rule reappointed, all shocks |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | Short and predictable | 1 | 0.8 | 0 | 1 qtr | 2 qtrs | 2.15 | 0.92 | 87% |
+| 1 | Moderate and predictable (default) | 1 | 0.5 | 0 | 1 qtr | 4 qtrs | 2.07 | 0.96 | 86% |
+| 2 | Longer and somewhat variable | 2 | 0.5 | 0.35 | 2 qtrs | 6 qtrs | 1.98 | 1.02 | 84% |
+| 3 | Long and variable | 2 | 0.35 | 0.55 | 4 qtrs | 9 qtrs | 1.87 | 1.11 | 79% |
+| 4 | Very long and variable | 3 | 0.35 | 0.75 | 6 qtrs | 12 qtrs | 1.79 | 1.19 | 71% |
+
+(200 seeds per shock; "AD shocks" are fear, boom, fiscal expansion and fiscal
+tightening.) As lags lengthen, a rule that reacts to last quarter's data does
+worse, and the gap between active policy and doing nothing narrows. That is the
+classic argument for caution, or for rules, when lags are long and variable.
+At the default setting the game is identical to earlier versions.
 
 ## Shocks
 
