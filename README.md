@@ -67,3 +67,9 @@ npm run build   # writes dist/long-and-variable.html
 | `js/app.js` | Interface |
 | `css/style.css` | Styles, light and dark |
 | `tests/model.test.js` | Tests, including a calibration check |
+
+## License
+
+Released under the [MIT License](LICENSE): anyone may use, copy, modify and
+share the game and its documentation, including in their own courses, as long
+as the copyright notice is kept.
