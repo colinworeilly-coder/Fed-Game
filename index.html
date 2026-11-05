@@ -88,7 +88,7 @@
         <div class="cred">
           <div class="cred-top"><span>Fed credibility</span><b id="credVal">80%</b></div>
           <div class="meter" aria-hidden="true"><span id="credBar"></span></div>
-          <p class="cred-note">How firmly people expect 2% inflation. It falls when inflation strays far from the goal.</p>
+          <p class="cred-note">How firmly people expect 2% inflation. It rises 3 points a quarter while inflation stays within 1 point of 2%, and falls when inflation strays further.</p>
         </div>
       </section>
     </aside>
@@ -215,6 +215,13 @@
         <datalist id="lagTicks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option></datalist>
         <div class="range-ends" aria-hidden="true"><span>Short and predictable</span><span>Long and variable</span></div>
         <output id="lagOut" for="setLags"></output>
+      </div>
+      <div class="range-field">
+        <label for="setCred">Starting credibility</label>
+        <input id="setCred" type="range" min="0" max="100" step="5" value="100" list="credTicks" aria-describedby="credOut">
+        <datalist id="credTicks"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist>
+        <div class="range-ends" aria-hidden="true"><span>None: expectations purely adaptive</span><span>Full: anchored at 2%</span></div>
+        <output id="credOut" for="setCred"></output>
       </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
       <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>

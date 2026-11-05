@@ -140,3 +140,32 @@ test('variable lags are random but reproducible, and do not change the shocks', 
   a.shocks.forEach((sh, t) => { assert.equal(sh.d, c.shocks[t].d); assert.equal(sh.z, c.shocks[t].z); });
   assert.equal(a.scenarioKey, c.scenarioKey); assert.equal(a.onset, c.onset);
 });
+
+test('starting credibility: the term starts at the instructor setting', () => {
+  for (const c of [0, 0.35, 1]) {
+    const g = new M.Game({ seed: 21, scenario: 'boom', params: { cred0: c } });
+    g.hist.forEach(r => assert.equal(r.cred, c, 'credibility is held through the pre-game quarters'));
+  }
+  assert.equal(M.mergeParams({}).cred0, 1);
+  assert.equal(M.mergeParams({ cred0: 2 }).cred0, 1);
+  assert.equal(M.mergeParams({ cred0: -1 }).cred0, 0);
+});
+
+test('starting credibility: low credibility makes expectations stickier and policy costlier', () => {
+  // Same shocks and the same rate path; only starting credibility differs.
+  const hi = new M.Game({ seed: 31, scenario: 'boom', onset: 2, params: { cred0: 1 } });
+  const lo = new M.Game({ seed: 31, scenario: 'boom', onset: 2, params: { cred0: 0 } });
+  for (let q = 0; q < 16; q++) { hi.play(4); lo.play(4); }
+  const gap = g => Math.max(...g.played().map(r => Math.abs(r.EeNext - g.p.piStar)));
+  assert.ok(gap(lo) > gap(hi), 'expectations drift further from 2% without credibility');
+  // Across many games the Taylor rule does worse when the Fed starts with no credibility.
+  let worse = 0;
+  for (let s = 1; s <= 40; s++) {
+    const a = new M.Game({ seed: s, scenario: 'fear', params: { cred0: 1 } });
+    const b = new M.Game({ seed: s, scenario: 'fear', params: { cred0: 0 } });
+    const da = M.score(a.p, a.counterfactual('taylor').slice(a.p.history)).dist;
+    const db = M.score(b.p, b.counterfactual('taylor').slice(b.p.history)).dist;
+    worse += db > da;
+  }
+  assert.ok(worse > 30);
+});

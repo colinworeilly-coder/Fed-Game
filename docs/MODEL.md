@@ -27,7 +27,7 @@ annualized. The code is in [`js/model.js`](../js/model.js).
 | Long-run aggregate supply | g\*<sub>t</sub> = ḡ + z<sub>t</sub> | LRAS is vertical at the Solow growth rate; real shocks z move it. |
 | Short-run aggregate supply | π<sub>t</sub> = E<sub>t</sub>π + κ·(g<sub>t</sub> − g\*<sub>t</sub>) + c<sub>t</sub> | SRAS passes through LRAS at expected inflation; sticky wages and prices give it a positive slope. c is a cost shock (shifts SRAS). |
 | Expectations | E<sub>t+1</sub>π = (1 − a<sub>t</sub>)·[E<sub>t</sub>π + λ·(π<sub>t</sub> − E<sub>t</sub>π)] + a<sub>t</sub>·π\* | Expectations adjust toward actual inflation ("eventually inflation expectations adjust"). A credible Fed anchors them. |
-| Credibility | a<sub>t</sub> = anchor · cred<sub>t</sub>; cred rises 0.03 a quarter when \|π − π\*\| < 1, falls 0.03·(\|π − π\*\| − 1) otherwise | Credible monetary policy. |
+| Credibility | a<sub>t</sub> = anchor · cred<sub>t</sub>; cred starts the term at the instructor's setting, then rises 0.03 a quarter when \|π − π\*\| < 1 and falls 0.03·(\|π − π\*\| − 1) otherwise | Credible monetary policy. See [Credibility](#credibility). |
 | Unemployment (Okun) | u<sub>t</sub> = u<sub>t−1</sub> − β·(g<sub>t</sub> − ḡ − θ·z<sub>t</sub>)/4 | Recessions are periods of growth below normal, when unemployment rises. |
 | Policy rate | i<sub>t</sub> = max(set<sub>t</sub>, 0); i<sup>eff</sup><sub>t</sub> = i<sub>t</sub> − φ·QE<sub>t</sub> | The funds rate has a zero lower bound; QE is a weaker substitute below it. |
 
@@ -112,17 +112,55 @@ the same lag draws as the player.
 
 | Level | Setting | k | ω | σ | Half of effect after | 90% after | AD shocks: never change (median) | AD shocks: Taylor rule (median) | Taylor rule reappointed, all shocks |
 |---|---|---|---|---|---|---|---|---|---|
-| 0 | Short and predictable | 1 | 0.8 | 0 | 1 qtr | 2 qtrs | 2.15 | 0.92 | 87% |
+| 0 | Short and predictable | 1 | 0.8 | 0 | 1 qtr | 2 qtrs | 2.16 | 0.92 | 87% |
 | 1 | Moderate and predictable (default) | 1 | 0.5 | 0 | 1 qtr | 4 qtrs | 2.07 | 0.96 | 86% |
 | 2 | Longer and somewhat variable | 2 | 0.5 | 0.35 | 2 qtrs | 6 qtrs | 1.98 | 1.02 | 84% |
 | 3 | Long and variable | 2 | 0.35 | 0.55 | 4 qtrs | 9 qtrs | 1.87 | 1.11 | 79% |
-| 4 | Very long and variable | 3 | 0.35 | 0.75 | 6 qtrs | 12 qtrs | 1.79 | 1.19 | 71% |
+| 4 | Very long and variable | 3 | 0.35 | 0.75 | 6 qtrs | 12 qtrs | 1.80 | 1.19 | 71% |
 
 (200 seeds per shock; "AD shocks" are fear, boom, fiscal expansion and fiscal
 tightening.) As lags lengthen, a rule that reacts to last quarter's data does
 worse, and the gap between active policy and doing nothing narrows. That is the
 classic argument for caution, or for rules, when lags are long and variable.
-At the default setting the game is identical to earlier versions.
+At the default setting the lag is the original single-stage lag.
+
+## Credibility
+
+Credibility (0–100%) measures how firmly the public expects 2% inflation. It
+enters only through the expectations equation, as the weight a = 0.12 × cred
+that pulls expected inflation toward 2% each quarter:
+
+* At 100%, about 12% of any gap between expected inflation and 2% closes each
+  quarter on its own (a half-life of about five quarters), so SRAS drifts back
+  toward 2% without the Fed having to create as much slack.
+* At 0%, expectations are purely adaptive: they follow realized inflation and
+  nothing pulls them back to target.
+
+It rises 3 points a quarter while inflation is within 1 point of 2%, and
+falls 3 points for each point of miss beyond that band (undershooting counts
+the same as overshooting). It is quick to lose and slow to rebuild: from zero
+to 100% takes 34 on-target quarters.
+
+The **Starting credibility** slider in the Instructor panel (URL parameter
+`cred=0…100`, default 100) sets credibility at the start of the term; it is
+held at that level through the pre-game quarters. Starting expectations are
+2% at every setting, so a low setting gives a Fed whose 2% target is not yet
+believed, not an economy that has already inherited high inflation. The
+opening headline tells players when markets doubt the Fed.
+
+| Starting credibility | AD shocks: never change (median) | AD shocks: Taylor rule (median) | Taylor rule reappointed, all shocks | Never change reappointed, all shocks | Oil shock: Taylor / never change |
+|---|---|---|---|---|---|
+| 100% (default) | 2.07 | 0.96 | 86% | 23% | 1.21 / 1.43 |
+| 75% | 2.18 | 0.97 | 84% | 20% | 1.23 / 1.55 |
+| 50% | 2.42 | 1.00 | 79% | 15% | 1.29 / 1.82 |
+| 25% | 2.75 | 1.05 | 73% | 13% | 1.36 / 2.22 |
+| 0% | 3.03 | 1.12 | 64% | 11% | 1.46 / 2.49 |
+
+(200 seeds per shock; "AD shocks" are fear, boom, fiscal expansion and fiscal
+tightening.) Without credibility every shock leaves a longer trail in
+expectations. Passive policy suffers most, because a fixed funds rate lets the
+real rate fall as expectations rise. Supply shocks such as oil become much
+harder, which is C&T's point that credible policy makes disinflation cheaper.
 
 ## Shocks
 
@@ -170,12 +208,12 @@ Median distance and share of games reappointed, 200 random seeds per shock
 
 | Shock | Never change: median | reappointed | Taylor rule: median | reappointed |
 |---|---|---|---|---|
-| A wave of fear | 2.04 | 2% | 0.98 | 100% |
-| Stock market and housing boom | 2.22 | 0% | 1.02 | 100% |
+| A wave of fear | 2.03 | 2% | 0.98 | 100% |
+| Stock market and housing boom | 2.22 | 0% | 1.01 | 100% |
 | Financial crisis | 4.12 | 0% | 1.78 | 0% |
-| Oil price shock | 1.43 | 29% | 1.20 | 81% |
+| Oil price shock | 1.43 | 29% | 1.21 | 81% |
 | Productivity boom | 1.20 | 65% | 0.79 | 100% |
-| Fiscal expansion | 2.05 | 1% | 0.95 | 100% |
+| Fiscal expansion | 2.05 | 1% | 0.94 | 100% |
 | Strong dollar | 0.72 | 97% | 0.45 | 100% |
 | Fiscal tightening | 1.97 | 3% | 0.92 | 100% |
 | Pandemic | 1.51 | 17% | 1.01 | 100% |

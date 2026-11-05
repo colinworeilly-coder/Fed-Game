@@ -528,7 +528,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         <div class="cred">
           <div class="cred-top"><span>Fed credibility</span><b id="credVal">80%</b></div>
           <div class="meter" aria-hidden="true"><span id="credBar"></span></div>
-          <p class="cred-note">How firmly people expect 2% inflation. It falls when inflation strays far from the goal.</p>
+          <p class="cred-note">How firmly people expect 2% inflation. It rises 3 points a quarter while inflation stays within 1 point of 2%, and falls when inflation strays further.</p>
         </div>
       </section>
     </aside>
@@ -656,6 +656,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         <div class="range-ends" aria-hidden="true"><span>Short and predictable</span><span>Long and variable</span></div>
         <output id="lagOut" for="setLags"></output>
       </div>
+      <div class="range-field">
+        <label for="setCred">Starting credibility</label>
+        <input id="setCred" type="range" min="0" max="100" step="5" value="100" list="credTicks" aria-describedby="credOut">
+        <datalist id="credTicks"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist>
+        <div class="range-ends" aria-hidden="true"><span>None: expectations purely adaptive</span><span>Full: anchored at 2%</span></div>
+        <output id="credOut" for="setCred"></output>
+      </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
       <label class="check" for="setDemo"><input id="setDemo" type="checkbox"> Classroom demo: hold the rate and play every quarter automatically</label>
     </div>
@@ -723,6 +730,9 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
  *   Expect:  Ee_{t+1} = (1-a_t)*[Ee_t + lambda*(pi_t - Ee_t)] + a_t*piStar,
  *            a_t = anchor * credibility_t
+ *   Cred  :  credibility starts the term at cred0 (the instructor's setting)
+ *            and then rises 0.03 a quarter when |pi - piStar| < 1, and falls
+ *            0.03*(|pi - piStar| - 1) otherwise.
  *
  * i_t is the federal funds rate chosen by the player, bounded below by zero.
  * At zero the player can add quantitative easing (QE): each "round" of QE
@@ -753,7 +763,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
     lambda: 0.3,    // adaptive-expectations speed (per quarter)
     anchor: 0.12,   // max pull of expectations toward the goal (at full credibility)
-    cred0: 0.8,     // starting credibility, 0..1
+    cred0: 1.0,     // credibility at the start of the term, 0..1 (held through the pre-game quarters)
     quarters: 16,   // length of the term (4 years)
     history: 6,     // quarters of pre-game history shown on the chart
     iMax: 20,       // highest rate allowed
@@ -935,6 +945,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
     // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
     p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    p.cred0 = clamp(Number(p.cred0), 0, 1);
+    if (isNaN(p.cred0)) p.cred0 = DEFAULTS.cred0;
     var pre = LAG_PRESETS[p.lags];
     ['omega', 'lagStages', 'lagVar'].forEach(function (k2) {
       if (!over || over[k2] === undefined || over[k2] === null) p[k2] = pre[k2];
@@ -986,8 +998,9 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
   // One quarter. `prev` is last quarter's record, `i` the rate chosen for
   // this quarter, `sh` this quarter's shocks.
   // `set` is the player's setting: >= 0 is the funds rate, < 0 means the
-  // funds rate is 0 plus QE.
-  function step(p, prev, set, sh) {
+  // funds rate is 0 plus QE. `holdCred` keeps credibility fixed (used for the
+  // pre-game quarters, so the term starts at the instructor's setting).
+  function step(p, prev, set, sh, holdCred) {
     set = clamp(set, p.qe ? -p.qeMax : 0, p.iMax);
     var i = Math.max(set, 0);
     var qe = Math.max(-set, 0);
@@ -1012,7 +1025,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var pi = S - g;
     var u = Math.max(0.5, prev.u - p.okun * (g - p.gBar - p.theta * sh.z) / 4);
     var miss = Math.abs(pi - p.piStar);
-    var cred = clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
+    var cred = holdCred ? prev.cred : clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
     var a = p.anchor * cred;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
@@ -1050,11 +1063,12 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     this.onset = drawn.onset;
     this.shocks = drawn.shocks;
     this.hist = [];
-    // Pre-game history: the Fed holds the neutral rate.
+    // Pre-game history: the Fed holds the neutral rate and credibility stays
+    // at its starting level.
     var s = initialState(this.p);
     var prev = { m: 0, Ee: s.Ee, u: s.u, cred: s.cred };
     for (var t = 0; t < this.p.history; t++) {
-      prev = step(this.p, prev, s.i, this.shocks[t]);
+      prev = step(this.p, prev, s.i, this.shocks[t], true);
       this.hist.push(prev);
     }
   }
@@ -1602,6 +1616,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (q.get('ustar')) params.uStar = parseFloat(q.get('ustar'));
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
+    if (q.get('cred') !== null && !isNaN(parseFloat(q.get('cred')))) params.cred0 = Math.max(0, Math.min(100, parseFloat(q.get('cred')))) / 100;
     if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
@@ -1618,6 +1633,18 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       : ' The timing is uncertain: some quarters policy bites faster, some slower' +
         (p.lagVar >= 0.7 ? ', by a wide margin.' : p.lagVar >= 0.5 ? ', often by a lot.' : '.');
     return { name: M.LAG_PRESETS[p.lags].name, speed: speed, vary: vary, all: speed + vary };
+  }
+
+  // Plain-language description of a starting credibility level (0..1).
+  function credText(c, p) {
+    var pct = Math.round(c * 100);
+    var pull = p.anchor * c;
+    var first;
+    if (pct === 0) first = 'Expectations simply follow past inflation; nothing pulls them back toward 2% until the Fed earns credibility.';
+    else if (pct === 100) first = 'Expectations are firmly anchored: each quarter about ' + Math.round(pull * 100) + '% of any gap between expected inflation and 2% closes on its own.';
+    else first = 'Expectations are partly anchored: each quarter about ' + (Math.round(pull * 1000) / 10) + '% of any gap between expected inflation and 2% closes on its own (' + Math.round(p.anchor * 100) + '% at full credibility).';
+    var rebuild = pct >= 100 ? '' : ' Credibility rises 3 points a quarter while inflation stays within 1 point of 2%, so reaching 100% takes ' + plural(Math.ceil((100 - pct) / 3), 'quarter') + '.';
+    return first + rebuild;
   }
 
   function clampInt(v, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? undefined : Math.max(lo, Math.min(hi, v)); }
@@ -1641,9 +1668,18 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('lagHelp').textContent = lt.all;
     $('lagNote').hidden = p.lags === M.DEFAULTS.lags;
     $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
+    var head = 'New Fed chair takes office as the economy grows at a steady pace';
+    var doubt = '';
+    if (p.cred0 < 0.4) {
+      head = 'New Fed chair takes office as markets doubt the Fed\'s commitment to 2% inflation';
+      doubt = ' After years of broken promises, few believe inflation will stay at 2%.';
+    } else if (p.cred0 < 0.75) {
+      head = 'New Fed chair takes office facing questions about the Fed\'s inflation record';
+      doubt = ' Some investors question whether the Fed will keep inflation at 2%.';
+    }
     setNews({
-      head: 'New Fed chair takes office as the economy grows at a steady pace',
-      deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%. Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
+      head: head,
+      deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%.' + doubt + ' Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
     }, 'Before your term');
     buildPips();
     renderAll();
@@ -1857,6 +1893,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
+    parts.push('Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.');
     if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
@@ -1967,6 +2004,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
+      ['cred\u2080', Math.round(p.cred0 * 100) + '%', 'Credibility at the start of the term (instructor setting)'],
       ['β', p.okun, "Okun's law coefficient"],
       ['θ', p.theta, 'Share of a real shock that changes output per worker, not jobs'],
       ['QE', p.qe ? 'on' : 'off', 'Each QE round works like a ' + (p.qeEff * p.step).toFixed(3) + '-point rate cut']
@@ -1994,6 +2032,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('setGbar').value = p.gBar;
     $('setQE').checked = p.qe;
     $('setLags').value = p.lags;
+    $('setCred').value = Math.round(p.cred0 * 100);
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -2005,7 +2044,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       uStar: parseFloat($('setUstar').value) || M.DEFAULTS.uStar,
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
       qe: $('setQE').checked,
-      lags: parseInt($('setLags').value, 10)
+      lags: parseInt($('setLags').value, 10),
+      cred0: parseInt($('setCred').value, 10) / 100
     };
     return {
       scenario: $('setScenario').value,
@@ -2026,6 +2066,11 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
     if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
+    if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    var cOut = $('credOut'), cb = document.createElement('b');
+    cOut.textContent = '';
+    cb.textContent = Math.round(o.params.cred0 * 100) + '%. ';
+    cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS)));
     var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
     out.textContent = '';
     var b = document.createElement('b'); b.textContent = lt.name + '. ';

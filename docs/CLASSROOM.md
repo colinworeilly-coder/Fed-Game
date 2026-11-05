@@ -60,6 +60,10 @@ Suggested assignment of shocks:
   the **Policy lags** slider at the default and once at *Long and variable*.
   How did you change your strategy? Did you overshoot because the first moves
   seemed to do nothing?
+* **Starting credibility.** Give half the class an economy with starting
+  credibility at 100% and the other half the same seed and shock at 0–20%.
+  Which group needed bigger rate moves? Why did inflation expectations (the
+  SRAS curve) take longer to settle without credibility?
 * **Rules vs. discretion.** Did you beat the Taylor rule? In which shocks did
   discretion help, and where did the rule do better?
 * **The zero lower bound.** In the financial crisis, what happened when the
@@ -88,5 +92,6 @@ Suggested assignment of shocks:
 | `ustar` | `5` | Natural rate of unemployment |
 | `gbar` | `2.5` | Solow growth rate |
 | `qe` | `0` | Disable quantitative easing |
+| `cred` | `20` | Starting credibility in percent, from `0` (expectations purely adaptive) to `100` (default, anchored at 2%) |
 | `lags` | `3` | Policy lags, from `0` (short and predictable) to `4` (very long and variable); default `1` |
 | `demo` | `1` | Classroom demo: hold the rate and auto-play |

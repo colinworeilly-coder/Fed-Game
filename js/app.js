@@ -44,6 +44,7 @@
     if (q.get('ustar')) params.uStar = parseFloat(q.get('ustar'));
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
+    if (q.get('cred') !== null && !isNaN(parseFloat(q.get('cred')))) params.cred0 = Math.max(0, Math.min(100, parseFloat(q.get('cred')))) / 100;
     if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
@@ -60,6 +61,18 @@
       : ' The timing is uncertain: some quarters policy bites faster, some slower' +
         (p.lagVar >= 0.7 ? ', by a wide margin.' : p.lagVar >= 0.5 ? ', often by a lot.' : '.');
     return { name: M.LAG_PRESETS[p.lags].name, speed: speed, vary: vary, all: speed + vary };
+  }
+
+  // Plain-language description of a starting credibility level (0..1).
+  function credText(c, p) {
+    var pct = Math.round(c * 100);
+    var pull = p.anchor * c;
+    var first;
+    if (pct === 0) first = 'Expectations simply follow past inflation; nothing pulls them back toward 2% until the Fed earns credibility.';
+    else if (pct === 100) first = 'Expectations are firmly anchored: each quarter about ' + Math.round(pull * 100) + '% of any gap between expected inflation and 2% closes on its own.';
+    else first = 'Expectations are partly anchored: each quarter about ' + (Math.round(pull * 1000) / 10) + '% of any gap between expected inflation and 2% closes on its own (' + Math.round(p.anchor * 100) + '% at full credibility).';
+    var rebuild = pct >= 100 ? '' : ' Credibility rises 3 points a quarter while inflation stays within 1 point of 2%, so reaching 100% takes ' + plural(Math.ceil((100 - pct) / 3), 'quarter') + '.';
+    return first + rebuild;
   }
 
   function clampInt(v, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? undefined : Math.max(lo, Math.min(hi, v)); }
@@ -83,9 +96,18 @@
     $('lagHelp').textContent = lt.all;
     $('lagNote').hidden = p.lags === M.DEFAULTS.lags;
     $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
+    var head = 'New Fed chair takes office as the economy grows at a steady pace';
+    var doubt = '';
+    if (p.cred0 < 0.4) {
+      head = 'New Fed chair takes office as markets doubt the Fed\'s commitment to 2% inflation';
+      doubt = ' After years of broken promises, few believe inflation will stay at 2%.';
+    } else if (p.cred0 < 0.75) {
+      head = 'New Fed chair takes office facing questions about the Fed\'s inflation record';
+      doubt = ' Some investors question whether the Fed will keep inflation at 2%.';
+    }
     setNews({
-      head: 'New Fed chair takes office as the economy grows at a steady pace',
-      deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%. Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
+      head: head,
+      deck: 'Inflation is ' + f(state.game.last().pi) + '% and unemployment is ' + f(state.game.last().u) + '%.' + doubt + ' Markets wait for the new chair\'s first decision on the funds rate, now ' + f(state.game.last().i, 2) + '%.'
     }, 'Before your term');
     buildPips();
     renderAll();
@@ -299,6 +321,7 @@
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
+    parts.push('Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.');
     if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
@@ -409,6 +432,7 @@
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
+      ['cred\u2080', Math.round(p.cred0 * 100) + '%', 'Credibility at the start of the term (instructor setting)'],
       ['β', p.okun, "Okun's law coefficient"],
       ['θ', p.theta, 'Share of a real shock that changes output per worker, not jobs'],
       ['QE', p.qe ? 'on' : 'off', 'Each QE round works like a ' + (p.qeEff * p.step).toFixed(3) + '-point rate cut']
@@ -436,6 +460,7 @@
     $('setGbar').value = p.gBar;
     $('setQE').checked = p.qe;
     $('setLags').value = p.lags;
+    $('setCred').value = Math.round(p.cred0 * 100);
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -447,7 +472,8 @@
       uStar: parseFloat($('setUstar').value) || M.DEFAULTS.uStar,
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
       qe: $('setQE').checked,
-      lags: parseInt($('setLags').value, 10)
+      lags: parseInt($('setLags').value, 10),
+      cred0: parseInt($('setCred').value, 10) / 100
     };
     return {
       scenario: $('setScenario').value,
@@ -468,6 +494,11 @@
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
     if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
+    if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    var cOut = $('credOut'), cb = document.createElement('b');
+    cOut.textContent = '';
+    cb.textContent = Math.round(o.params.cred0 * 100) + '%. ';
+    cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS)));
     var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
     out.textContent = '';
     var b = document.createElement('b'); b.textContent = lt.name + '. ';

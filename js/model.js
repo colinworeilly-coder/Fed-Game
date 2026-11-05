@@ -17,6 +17,9 @@
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
  *   Expect:  Ee_{t+1} = (1-a_t)*[Ee_t + lambda*(pi_t - Ee_t)] + a_t*piStar,
  *            a_t = anchor * credibility_t
+ *   Cred  :  credibility starts the term at cred0 (the instructor's setting)
+ *            and then rises 0.03 a quarter when |pi - piStar| < 1, and falls
+ *            0.03*(|pi - piStar| - 1) otherwise.
  *
  * i_t is the federal funds rate chosen by the player, bounded below by zero.
  * At zero the player can add quantitative easing (QE): each "round" of QE
@@ -47,7 +50,7 @@
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
     lambda: 0.3,    // adaptive-expectations speed (per quarter)
     anchor: 0.12,   // max pull of expectations toward the goal (at full credibility)
-    cred0: 0.8,     // starting credibility, 0..1
+    cred0: 1.0,     // credibility at the start of the term, 0..1 (held through the pre-game quarters)
     quarters: 16,   // length of the term (4 years)
     history: 6,     // quarters of pre-game history shown on the chart
     iMax: 20,       // highest rate allowed
@@ -229,6 +232,8 @@
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
     // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
     p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    p.cred0 = clamp(Number(p.cred0), 0, 1);
+    if (isNaN(p.cred0)) p.cred0 = DEFAULTS.cred0;
     var pre = LAG_PRESETS[p.lags];
     ['omega', 'lagStages', 'lagVar'].forEach(function (k2) {
       if (!over || over[k2] === undefined || over[k2] === null) p[k2] = pre[k2];
@@ -280,8 +285,9 @@
   // One quarter. `prev` is last quarter's record, `i` the rate chosen for
   // this quarter, `sh` this quarter's shocks.
   // `set` is the player's setting: >= 0 is the funds rate, < 0 means the
-  // funds rate is 0 plus QE.
-  function step(p, prev, set, sh) {
+  // funds rate is 0 plus QE. `holdCred` keeps credibility fixed (used for the
+  // pre-game quarters, so the term starts at the instructor's setting).
+  function step(p, prev, set, sh, holdCred) {
     set = clamp(set, p.qe ? -p.qeMax : 0, p.iMax);
     var i = Math.max(set, 0);
     var qe = Math.max(-set, 0);
@@ -306,7 +312,7 @@
     var pi = S - g;
     var u = Math.max(0.5, prev.u - p.okun * (g - p.gBar - p.theta * sh.z) / 4);
     var miss = Math.abs(pi - p.piStar);
-    var cred = clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
+    var cred = holdCred ? prev.cred : clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
     var a = p.anchor * cred;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
@@ -344,11 +350,12 @@
     this.onset = drawn.onset;
     this.shocks = drawn.shocks;
     this.hist = [];
-    // Pre-game history: the Fed holds the neutral rate.
+    // Pre-game history: the Fed holds the neutral rate and credibility stays
+    // at its starting level.
     var s = initialState(this.p);
     var prev = { m: 0, Ee: s.Ee, u: s.u, cred: s.cred };
     for (var t = 0; t < this.p.history; t++) {
-      prev = step(this.p, prev, s.i, this.shocks[t]);
+      prev = step(this.p, prev, s.i, this.shocks[t], true);
       this.hist.push(prev);
     }
   }
