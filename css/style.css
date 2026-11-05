@@ -136,7 +136,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark { color: var(--accent); display: grid; }
 .brand-name { font: 700 var(--fs-xl)/1.1 var(--font-news); letter-spacing: -0.01em; }
-.brand-sub { font-size: var(--fs-s); color: var(--ink-2); }
+.brand { min-width: 0; }
+.brand-sub { font-size: var(--fs-s); color: var(--ink-2); max-width: 36ch; }
+.homelink { font-size: var(--fs-s); margin-bottom: -6px; }
+.homelink a { color: var(--ink-2); text-decoration: none; border-radius: 4px; }
+.homelink a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .term { justify-self: center; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .term-label { font-size: var(--fs-s); color: var(--ink-2); text-align: center; }
 .term-label > span:first-child { font-weight: 600; color: var(--ink); }
