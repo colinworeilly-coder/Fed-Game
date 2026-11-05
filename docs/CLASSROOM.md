@@ -64,6 +64,12 @@ Suggested assignment of shocks:
   credibility at 100% and the other half the same seed and shock at 0–20%.
   Which group needed bigger rate moves? Why did inflation expectations (the
   SRAS curve) take longer to settle without credibility?
+* **Moving up LRAS.** With anchoring switched off
+  (`?scenario=none&quarters=24&anchor=0`), cut the funds rate to zero for six
+  quarters, then each quarter set it to 2% plus expected inflation. Where does
+  the economy end up on the AD–AS diagram? Compare with C&T's long-run effect
+  of a permanent increase in money growth. Then try holding the rate at zero:
+  why does inflation keep accelerating?
 * **Rules vs. discretion.** Did you beat the Taylor rule? In which shocks did
   discretion help, and where did the rule do better?
 * **The zero lower bound.** In the financial crisis, what happened when the
@@ -92,6 +98,7 @@ Suggested assignment of shocks:
 | `ustar` | `5` | Natural rate of unemployment |
 | `gbar` | `2.5` | Solow growth rate |
 | `qe` | `0` | Disable quantitative easing |
+| `anchor` | `0` | Switch off anchoring to 2%: expectations purely adaptive for the whole game |
 | `cred` | `20` | Starting credibility in percent, from `0` (expectations purely adaptive) to `100` (default, anchored at 2%) |
 | `lags` | `3` | Policy lags, from `0` (short and predictable) to `4` (very long and variable); default `1` |
 | `demo` | `1` | Classroom demo: hold the rate and auto-play |

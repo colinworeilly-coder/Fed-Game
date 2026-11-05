@@ -21,7 +21,8 @@ test('every quarter satisfies the AD and SRAS equations', () => {
   while (!g.done()) g.play(3 + Math.sin(g.quarter()));
   for (const r of g.hist) {
     close(r.pi + r.g, r.S, 1e-9);                                     // AD: pi + g = M~ + v~
-    close(r.pi, r.Ee + g.p.kappa * (r.g - r.gStar) + r.c, 1e-9);      // SRAS
+    close(r.pi, r.Ee + g.p.kappa * (r.g - r.gStar) + r.slack + r.c, 1e-9);  // SRAS
+    close(r.slack, g.p.phi * (g.p.uStar - (g.hist[g.hist.indexOf(r) - 1] || { u: g.p.uStar }).u), 1e-9);
   }
 });
 
@@ -168,4 +169,31 @@ test('starting credibility: low credibility makes expectations stickier and poli
     worse += db > da;
   }
   assert.ok(worse > 30);
+});
+
+test('a one-time stimulus moves the economy up LRAS when expectations are unanchored', () => {
+  // C&T's experiment: a burst of stimulus (funds rate at zero for six
+  // quarters), then a neutral real rate. Without anchoring, expectations
+  // should settle at a higher inflation rate with growth back at the Solow
+  // rate and unemployment back near its natural rate.
+  const run = (phi) => {
+    const g = new M.Game({ seed: 1, scenario: 'none', params: Object.assign({ quarters: 48, anchored: false, phi }, quiet) });
+    for (let q = 1; q <= 48; q++) g.play(q <= 6 ? 0 : M.roundStep(g.p.rStar + g.last().EeNext, 0.25));
+    return g.last();
+  };
+  const withPhi = run(0.3), without = run(0);
+  assert.ok(withPhi.EeNext > 4, 'expected inflation settles well above 2%');
+  close(withPhi.pi, withPhi.EeNext, 0.15);
+  close(withPhi.g, 3, 0.2);
+  assert.ok(Math.abs(withPhi.u - 4.5) < 0.2, 'unemployment returns near its natural rate');
+  assert.ok(without.EeNext < 2.5, 'without the labor-market term, expectations drift back toward 2%');
+});
+
+test('switching anchoring off makes expectations purely adaptive', () => {
+  const p = M.mergeParams({ anchored: false });
+  assert.equal(p.anchored, false);
+  const g = new M.Game({ seed: 3, scenario: 'none', params: Object.assign({ anchored: false }, quiet) });
+  g.play(4);
+  const r = g.last();
+  close(r.EeNext, r.Ee + g.p.lambda * (r.pi - r.Ee), 1e-12);
 });

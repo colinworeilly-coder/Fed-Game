@@ -47,8 +47,9 @@ No build step and no dependencies. Either:
   textbook, the ten shocks, scoring, and a calibration check.
 * The **Instructor** button sets the shock, its timing, the random seed, the
   natural rate, the Solow rate, the term length, a **policy lags** slider
-  (from short and predictable to long and variable) and a **starting
-  credibility** slider (from expectations purely adaptive to anchored at 2%),
+  (from short and predictable to long and variable), a **starting
+  credibility** slider, and a switch that turns off anchoring of expectations
+  to 2% (so a lasting stimulus moves the economy up LRAS to higher inflation),
   and gives a link that recreates the same economy for the whole class.
 
 ## Development

@@ -223,7 +223,7 @@
       var cls = ghost ? ' ghost' : '';
       el('line', { 'class': 'curve lras' + cls, x1: X(s.gStar), x2: X(s.gStar), y1: m.t, y2: m.t + ph }, g);
       el('line', { 'class': 'curve ad' + cls, x1: X(xlo), y1: Y(s.S - xlo), x2: X(xhi), y2: Y(s.S - xhi) }, g);
-      var sr = function (gg) { return s.Ee + s.c + k * (gg - s.gStar); };
+      var sr = function (gg) { return s.Ee + s.c + (s.slack || 0) + k * (gg - s.gStar); };
       el('line', { 'class': 'curve sras' + cls, x1: X(xlo), y1: Y(sr(xlo)), x2: X(xhi), y2: Y(sr(xhi)) }, g);
     }
     if (prev) curves(prev, true);
@@ -245,8 +245,9 @@
     var adLx = xhi - 0.4, adLy = cur.S - adLx;
     if (adLy < ylo + 0.8) { adLy = ylo + 0.8; adLx = cur.S - adLy; }
     el('text', { 'class': 'curve-lbl ad', x: X(adLx) + 4, y: Y(adLy) - 6, 'text-anchor': adLx > xhi - 1.5 ? 'end' : 'start' }, svg, 'AD');
-    var srLx = xhi - 0.4, srLy = cur.Ee + cur.c + k * (srLx - cur.gStar);
-    if (srLy > yhi - 0.6) { srLy = yhi - 0.6; srLx = cur.gStar + (srLy - cur.Ee - cur.c) / k; }
+    var srBase = cur.Ee + cur.c + (cur.slack || 0);
+    var srLx = xhi - 0.4, srLy = srBase + k * (srLx - cur.gStar);
+    if (srLy > yhi - 0.6) { srLy = yhi - 0.6; srLx = cur.gStar + (srLy - srBase) / k; }
     el('text', { 'class': 'curve-lbl sras', x: X(srLx) - 2, y: Y(srLy) + 16, 'text-anchor': 'end' }, svg, 'SRAS');
     el('text', { 'class': 'curve-lbl lras', x: X(cur.gStar) + 5, y: m.t + 13 }, svg, 'LRAS');
 

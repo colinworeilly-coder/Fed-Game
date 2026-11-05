@@ -404,6 +404,9 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 #shareLink { word-break: break-all; }
 .range-field { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
 .range-field label { font-size: var(--fs-s); color: var(--ink-2); font-weight: 600; }
+.range-field label.check-inline { display: flex; flex-direction: row; justify-content: flex-start; text-align: left; align-items: center; gap: 8px; color: var(--ink); font-weight: 500; padding-bottom: 6px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.range-field input[type="range"]:disabled { opacity: 0.4; }
+.cred.off .meter span { width: 0 !important; }
 .range-field input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
 .range-ends { display: flex; justify-content: space-between; font-size: var(--fs-xs); color: var(--muted); }
 .range-field output { font-size: var(--fs-s); color: var(--ink); }
@@ -630,8 +633,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
       <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;<sub>t</sub>)&middot;m<sub>&minus;1</sub> + &omega;<sub>t</sub>&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually, passing through <i>k</i> such stages; more stages give a longer, hump-shaped lag. With variable lags the speed &omega;<sub>t</sub> is random each quarter, so the same move can bite fast or slow. <span id="lagModel"></span></p></div>
       <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
-      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
-      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
+      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + &phi;&middot;(u* &minus; u<sub>&minus;1</sub>) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate. While unemployment is below its natural rate, workers push for raises to catch up with prices, so SRAS keeps shifting up (the &phi; term); <i>c</i> captures cost shocks.</p></div>
+      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target. Instructors can switch anchoring off, making expectations purely adaptive.</p></div>
       <div class="eq"><span class="eq-name">Okun's law</span><code>&Delta;u = &minus;&beta;&middot;(g &minus; g&#772; &minus; &theta;&middot;z) / 4</code><p>Unemployment rises when growth falls short of its normal pace. Part of a real shock changes output per worker rather than jobs.</p></div>
     </div>
     <h3>Parameters</h3>
@@ -673,10 +676,11 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         <output id="lagOut" for="setLags"></output>
       </div>
       <div class="range-field">
+        <label class="check-inline" for="setAnchor"><input id="setAnchor" type="checkbox" checked> Anchor expectations to 2% (Fed credibility)</label>
         <label for="setCred">Starting credibility</label>
         <input id="setCred" type="range" min="0" max="100" step="5" value="100" list="credTicks" aria-describedby="credOut">
         <datalist id="credTicks"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist>
-        <div class="range-ends" aria-hidden="true"><span>None: expectations purely adaptive</span><span>Full: anchored at 2%</span></div>
+        <div class="range-ends" aria-hidden="true"><span>0%: no pull toward 2% at first</span><span>100%: anchored at 2%</span></div>
         <output id="credOut" for="setCred"></output>
       </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
@@ -742,10 +746,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
  *            lag); w_t = omega, or omega times a random factor when lags
  *            are variable (lagVar > 0).
  *   LRAS  :  gStar_t = gBar + z_t                       (Solow growth rate)
- *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + c_t
+ *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + phi*(uStar - u_{t-1}) + c_t
+ *            (the phi term: a tight labor market keeps pushing wages and
+ *            prices up, so expectations can settle at a new level once
+ *            unemployment is back at its natural rate)
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
  *   Expect:  Ee_{t+1} = (1-a_t)*[Ee_t + lambda*(pi_t - Ee_t)] + a_t*piStar,
- *            a_t = anchor * credibility_t
+ *            a_t = anchor * credibility_t (0 when anchoring is switched off)
  *   Cred  :  credibility starts the term at cred0 (the instructor's setting)
  *            and then rises 0.03 a quarter when |pi - piStar| < 1, and falls
  *            0.03*(|pi - piStar| - 1) otherwise.
@@ -769,6 +776,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     uStar: 4.5,     // natural rate of unemployment, %
     rStar: 2.0,     // neutral real interest rate, %
     kappa: 0.5,     // SRAS slope: extra inflation per point of growth above Solow
+    phi: 0.3,       // SRAS shift per point of unemployment below its natural rate
     alpha: 1.0,     // spending-growth response to the real-rate gap
     lags: 1,        // policy-lag setting, 0 (short) to 4 (long and variable); sets the next three
     omega: 0.5,     // speed at which a rate change reaches spending (per quarter, per stage)
@@ -779,6 +787,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
     lambda: 0.3,    // adaptive-expectations speed (per quarter)
     anchor: 0.12,   // max pull of expectations toward the goal (at full credibility)
+    anchored: true, // false = expectations purely adaptive (no pull toward 2%)
     cred0: 1.0,     // credibility at the start of the term, 0..1 (held through the pre-game quarters)
     quarters: 16,   // length of the term (4 years)
     history: 6,     // quarters of pre-game history shown on the chart
@@ -961,6 +970,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
     // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
     p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    p.anchored = p.anchored !== false && p.anchored !== 'false' && p.anchored !== 0;
     p.cred0 = clamp(Number(p.cred0), 0, 1);
     if (isNaN(p.cred0)) p.cred0 = DEFAULTS.cred0;
     var pre = LAG_PRESETS[p.lags];
@@ -1036,17 +1046,19 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var m = input;
     var gStar = p.gBar + sh.z;
     var S = Ee + p.gBar - p.alpha * m + p.gamma * (prev.u - p.uStar) + sh.d;
-    // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + c)
-    var g = (S - Ee - sh.c + p.kappa * gStar) / (1 + p.kappa);
+    // Labor-market pressure on SRAS from last quarter's unemployment gap.
+    var slack = p.phi * (p.uStar - prev.u);
+    // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + slack + c)
+    var g = (S - Ee - sh.c - slack + p.kappa * gStar) / (1 + p.kappa);
     var pi = S - g;
     var u = Math.max(0.5, prev.u - p.okun * (g - p.gBar - p.theta * sh.z) / 4);
     var miss = Math.abs(pi - p.piStar);
     var cred = holdCred ? prev.cred : clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
-    var a = p.anchor * cred;
+    var a = p.anchored ? p.anchor * cred : 0;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
       set: set, i: i, qe: qe, iEff: iEff, m: m, ms: ms, w: w, rgap: rgap, Ee: Ee, EeNext: EeNext, S: S, g: g,
-      gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c
+      gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c, slack: slack
     };
   }
 
@@ -1507,7 +1519,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       var cls = ghost ? ' ghost' : '';
       el('line', { 'class': 'curve lras' + cls, x1: X(s.gStar), x2: X(s.gStar), y1: m.t, y2: m.t + ph }, g);
       el('line', { 'class': 'curve ad' + cls, x1: X(xlo), y1: Y(s.S - xlo), x2: X(xhi), y2: Y(s.S - xhi) }, g);
-      var sr = function (gg) { return s.Ee + s.c + k * (gg - s.gStar); };
+      var sr = function (gg) { return s.Ee + s.c + (s.slack || 0) + k * (gg - s.gStar); };
       el('line', { 'class': 'curve sras' + cls, x1: X(xlo), y1: Y(sr(xlo)), x2: X(xhi), y2: Y(sr(xhi)) }, g);
     }
     if (prev) curves(prev, true);
@@ -1529,8 +1541,9 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var adLx = xhi - 0.4, adLy = cur.S - adLx;
     if (adLy < ylo + 0.8) { adLy = ylo + 0.8; adLx = cur.S - adLy; }
     el('text', { 'class': 'curve-lbl ad', x: X(adLx) + 4, y: Y(adLy) - 6, 'text-anchor': adLx > xhi - 1.5 ? 'end' : 'start' }, svg, 'AD');
-    var srLx = xhi - 0.4, srLy = cur.Ee + cur.c + k * (srLx - cur.gStar);
-    if (srLy > yhi - 0.6) { srLy = yhi - 0.6; srLx = cur.gStar + (srLy - cur.Ee - cur.c) / k; }
+    var srBase = cur.Ee + cur.c + (cur.slack || 0);
+    var srLx = xhi - 0.4, srLy = srBase + k * (srLx - cur.gStar);
+    if (srLy > yhi - 0.6) { srLy = yhi - 0.6; srLx = cur.gStar + (srLy - srBase) / k; }
     el('text', { 'class': 'curve-lbl sras', x: X(srLx) - 2, y: Y(srLy) + 16, 'text-anchor': 'end' }, svg, 'SRAS');
     el('text', { 'class': 'curve-lbl lras', x: X(cur.gStar) + 5, y: m.t + 13 }, svg, 'LRAS');
 
@@ -1633,6 +1646,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
     if (q.get('cred') !== null && !isNaN(parseFloat(q.get('cred')))) params.cred0 = Math.max(0, Math.min(100, parseFloat(q.get('cred')))) / 100;
+    if (q.get('anchor') === '0') params.anchored = false;
     if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
@@ -1686,7 +1700,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
     var head = 'New Fed chair takes office as the economy grows at a steady pace';
     var doubt = '';
-    if (p.cred0 < 0.4) {
+    if (!p.anchored || p.cred0 < 0.4) {
       head = 'New Fed chair takes office as markets doubt the Fed\'s commitment to 2% inflation';
       doubt = ' After years of broken promises, few believe inflation will stay at 2%.';
     } else if (p.cred0 < 0.75) {
@@ -1828,9 +1842,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     tile(dl, { label: 'Fed funds rate', color: '--i', value: f(r.i, 2) + '%', delta: r.qe > 0 ? '+ QE' : undefined, minor: true });
     tile(dl, { label: 'Expected inflation', value: f(r.EeNext) + '%', delta: 'for next quarter', minor: true });
     tile(dl, { label: 'Real interest rate', value: f(r.r) + '%', delta: 'neutral ' + f(p.rStar) + '%', minor: true });
-    var pct = Math.round(r.cred * 100);
-    $('credVal').textContent = pct + '%';
-    $('credBar').style.width = pct + '%';
+    var pct = Math.round(r.cred * 100), credBox = document.querySelector('.cred');
+    credBox.classList.toggle('off', !p.anchored);
+    $('credVal').textContent = p.anchored ? pct + '%' : 'Off';
+    $('credBar').style.width = p.anchored ? pct + '%' : '0';
+    credBox.querySelector('.cred-note').textContent = p.anchored
+      ? 'How firmly people expect 2% inflation. It rises 3 points a quarter while inflation stays within 1 point of 2%, and falls when inflation strays further.'
+      : 'Anchoring is switched off in this game: expectations follow past inflation only, with no pull toward 2%.';
   }
 
   function renderCharts() {
@@ -1844,7 +1862,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     C.timeSeries($('tsChart'), { n: n, historyLen: p.history, labels: labels, data: data, goalPi: p.piStar, goalU: p.uStar, shock: shock });
 
     var cur = g.last(), prev = g.hist[g.hist.length - 2];
-    var pack = function (h) { return { S: h.S, Ee: h.Ee, gStar: h.gStar, c: h.c, g: h.g, pi: h.pi }; };
+    var pack = function (h) { return { S: h.S, Ee: h.Ee, gStar: h.gStar, c: h.c, slack: h.slack || 0, g: h.g, pi: h.pi }; };
     var trail = g.hist.slice(-6).map(function (h) { return { g: h.g, pi: h.pi }; });
     C.adas($('adasChart'), { cur: pack(cur), prev: prev ? pack(prev) : null, trail: trail, kappa: p.kappa, goal: { g: p.gBar, pi: p.piStar } });
     renderCurves(cur, prev);
@@ -1860,7 +1878,10 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       d.appendChild(dt); d.appendChild(dd); dl.appendChild(d);
     }
     row('ad', 'AD', 'Spending growth <i>M&#771;</i> + <i>v&#771;</i> = <b>' + f(cur.S) + '%</b>' + (prev ? ' (' + signed(cur.S - prev.S) + ')' : ''));
-    row('sras', 'SRAS', 'Drawn for expected inflation E(&pi;) = <b>' + f(cur.Ee) + '%</b>' + (prev ? ' (' + signed(cur.Ee - prev.Ee) + ')' : ''));
+    var lab = Math.abs(cur.slack || 0) >= 0.05
+      ? ', ' + ((cur.slack > 0) ? 'raised' : 'lowered') + ' <b>' + f(Math.abs(cur.slack)) + '</b> by a ' + (cur.slack > 0 ? 'tight' : 'slack') + ' labor market'
+      : '';
+    row('sras', 'SRAS', 'Drawn for expected inflation E(&pi;) = <b>' + f(cur.Ee) + '%</b>' + (prev ? ' (' + signed(cur.Ee - prev.Ee) + ')' : '') + lab);
     row('lras', 'LRAS', 'Solow growth rate = <b>' + f(cur.gStar) + '%</b>' + (prev ? ' (' + signed(cur.gStar - prev.gStar) + ')' : ''));
     $('shiftNote').textContent = describeShift(cur, prev, p);
   }
@@ -1872,7 +1893,13 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (Math.abs(dS) >= 0.4) parts.push('AD shifted ' + (dS > 0 ? 'right' : 'left') + ' as spending growth ' + (dS > 0 ? 'rose' : 'fell') + ' by ' + f(Math.abs(dS)) + ' points.');
     if (Math.abs(dZ) >= 0.6) parts.push('LRAS shifted ' + (dZ > 0 ? 'right' : 'left') + ': a real shock ' + (dZ > 0 ? 'raised' : 'lowered') + ' the Solow growth rate to ' + f(cur.gStar) + '%.');
     if (Math.abs(dE) >= 0.15) parts.push('SRAS shifted ' + (dE > 0 ? 'up' : 'down') + ' because expected inflation ' + (dE > 0 ? 'rose' : 'fell') + ' to ' + f(cur.Ee) + '%.');
-    if (Math.abs(cur.c) >= 0.8) parts.push('Higher costs pushed SRAS ' + (cur.c > 0 ? 'up' : 'down') + ' this quarter.');
+    if (Math.abs(cur.slack || 0) >= 0.25) {
+      var ug = Math.abs(cur.slack / p.phi);
+      parts.push(cur.slack > 0
+        ? 'Unemployment is ' + f(ug) + ' points below its natural rate, so wages are rising faster than expected: the tight labor market holds SRAS ' + f(cur.slack) + ' points higher.'
+        : 'Unemployment is ' + f(ug) + ' points above its natural rate, so wage growth is slowing: slack holds SRAS ' + f(-cur.slack) + ' points lower.');
+    }
+    if (Math.abs(cur.c) >= 0.8) parts.push((cur.c > 0 ? 'Higher' : 'Lower') + ' costs pushed SRAS ' + (cur.c > 0 ? 'up' : 'down') + ' this quarter.');
     if (!parts.length) parts.push('The curves barely moved this quarter.');
     var gap = cur.g - cur.gStar;
     if (gap > 0.5) parts.push('Growth is above the Solow rate, so inflation is running above expectations.');
@@ -1915,7 +1942,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
-    parts.push('Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.');
+    parts.push(p.anchored ? 'Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.'
+      : 'Expectations were purely adaptive in this game (no anchoring to 2%).');
     if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
@@ -2019,6 +2047,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       ['u*', p.uStar + '%', 'Natural rate of unemployment'],
       ['r*', p.rStar + '%', 'Neutral real interest rate; neutral funds rate = r* + E(π)'],
       ['κ', p.kappa, 'Slope of SRAS'],
+      ['φ', p.phi, 'SRAS shift per point of unemployment below its natural rate (labor-market pressure)'],
       ['α', p.alpha, 'Effect of the real-rate gap on spending growth'],
       ['ω', p.omega, 'Average share of the rate gap passed through each stage per quarter'],
       ['k', p.lagStages, 'Number of lag stages (policy-lag setting: ' + M.LAG_PRESETS[p.lags].name.toLowerCase() + ')'],
@@ -2026,7 +2055,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
-      ['cred\u2080', Math.round(p.cred0 * 100) + '%', 'Credibility at the start of the term (instructor setting)'],
+      ['cred\u2080', p.anchored ? Math.round(p.cred0 * 100) + '%' : 'off', p.anchored ? 'Credibility at the start of the term (instructor setting)' : 'Anchoring switched off: expectations purely adaptive'],
       ['β', p.okun, "Okun's law coefficient"],
       ['θ', p.theta, 'Share of a real shock that changes output per worker, not jobs'],
       ['QE', p.qe ? 'on' : 'off', 'Each QE round works like a ' + (p.qeEff * p.step).toFixed(3) + '-point rate cut']
@@ -2055,6 +2084,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     $('setQE').checked = p.qe;
     $('setLags').value = p.lags;
     $('setCred').value = Math.round(p.cred0 * 100);
+    $('setAnchor').checked = p.anchored;
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -2067,7 +2097,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
       qe: $('setQE').checked,
       lags: parseInt($('setLags').value, 10),
-      cred0: parseInt($('setCred').value, 10) / 100
+      cred0: parseInt($('setCred').value, 10) / 100,
+      anchored: $('setAnchor').checked
     };
     return {
       scenario: $('setScenario').value,
@@ -2088,11 +2119,18 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
     if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
-    if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    if (!o.params.anchored) q.set('anchor', '0');
+    else if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    $('setCred').disabled = !o.params.anchored;
     var cOut = $('credOut'), cb = document.createElement('b');
     cOut.textContent = '';
     cb.textContent = Math.round(o.params.cred0 * 100) + '%. ';
-    cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS)));
+    if (o.params.anchored) { cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS))); }
+    else {
+      cb.textContent = 'Anchoring off. ';
+      cOut.appendChild(cb);
+      cOut.appendChild(document.createTextNode('Expectations follow past inflation only and are never pulled back toward 2%. Use this to show the economy settling at a new, higher inflation rate on LRAS after a lasting stimulus.'));
+    }
     var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
     out.textContent = '';
     var b = document.createElement('b'); b.textContent = lt.name + '. ';

@@ -45,6 +45,7 @@
     if (q.get('gbar')) params.gBar = parseFloat(q.get('gbar'));
     if (q.get('qe') === '0') params.qe = false;
     if (q.get('cred') !== null && !isNaN(parseFloat(q.get('cred')))) params.cred0 = Math.max(0, Math.min(100, parseFloat(q.get('cred')))) / 100;
+    if (q.get('anchor') === '0') params.anchored = false;
     if (q.get('lags') !== null) params.lags = clampInt(q.get('lags'), 0, M.LAG_PRESETS.length - 1);
     o.params = params;
     o.demo = q.get('demo') === '1';
@@ -98,7 +99,7 @@
     $('lagNote').textContent = 'Policy lags: ' + lt.name.toLowerCase() + '. ' + lt.speed;
     var head = 'New Fed chair takes office as the economy grows at a steady pace';
     var doubt = '';
-    if (p.cred0 < 0.4) {
+    if (!p.anchored || p.cred0 < 0.4) {
       head = 'New Fed chair takes office as markets doubt the Fed\'s commitment to 2% inflation';
       doubt = ' After years of broken promises, few believe inflation will stay at 2%.';
     } else if (p.cred0 < 0.75) {
@@ -240,9 +241,13 @@
     tile(dl, { label: 'Fed funds rate', color: '--i', value: f(r.i, 2) + '%', delta: r.qe > 0 ? '+ QE' : undefined, minor: true });
     tile(dl, { label: 'Expected inflation', value: f(r.EeNext) + '%', delta: 'for next quarter', minor: true });
     tile(dl, { label: 'Real interest rate', value: f(r.r) + '%', delta: 'neutral ' + f(p.rStar) + '%', minor: true });
-    var pct = Math.round(r.cred * 100);
-    $('credVal').textContent = pct + '%';
-    $('credBar').style.width = pct + '%';
+    var pct = Math.round(r.cred * 100), credBox = document.querySelector('.cred');
+    credBox.classList.toggle('off', !p.anchored);
+    $('credVal').textContent = p.anchored ? pct + '%' : 'Off';
+    $('credBar').style.width = p.anchored ? pct + '%' : '0';
+    credBox.querySelector('.cred-note').textContent = p.anchored
+      ? 'How firmly people expect 2% inflation. It rises 3 points a quarter while inflation stays within 1 point of 2%, and falls when inflation strays further.'
+      : 'Anchoring is switched off in this game: expectations follow past inflation only, with no pull toward 2%.';
   }
 
   function renderCharts() {
@@ -256,7 +261,7 @@
     C.timeSeries($('tsChart'), { n: n, historyLen: p.history, labels: labels, data: data, goalPi: p.piStar, goalU: p.uStar, shock: shock });
 
     var cur = g.last(), prev = g.hist[g.hist.length - 2];
-    var pack = function (h) { return { S: h.S, Ee: h.Ee, gStar: h.gStar, c: h.c, g: h.g, pi: h.pi }; };
+    var pack = function (h) { return { S: h.S, Ee: h.Ee, gStar: h.gStar, c: h.c, slack: h.slack || 0, g: h.g, pi: h.pi }; };
     var trail = g.hist.slice(-6).map(function (h) { return { g: h.g, pi: h.pi }; });
     C.adas($('adasChart'), { cur: pack(cur), prev: prev ? pack(prev) : null, trail: trail, kappa: p.kappa, goal: { g: p.gBar, pi: p.piStar } });
     renderCurves(cur, prev);
@@ -272,7 +277,10 @@
       d.appendChild(dt); d.appendChild(dd); dl.appendChild(d);
     }
     row('ad', 'AD', 'Spending growth <i>M&#771;</i> + <i>v&#771;</i> = <b>' + f(cur.S) + '%</b>' + (prev ? ' (' + signed(cur.S - prev.S) + ')' : ''));
-    row('sras', 'SRAS', 'Drawn for expected inflation E(&pi;) = <b>' + f(cur.Ee) + '%</b>' + (prev ? ' (' + signed(cur.Ee - prev.Ee) + ')' : ''));
+    var lab = Math.abs(cur.slack || 0) >= 0.05
+      ? ', ' + ((cur.slack > 0) ? 'raised' : 'lowered') + ' <b>' + f(Math.abs(cur.slack)) + '</b> by a ' + (cur.slack > 0 ? 'tight' : 'slack') + ' labor market'
+      : '';
+    row('sras', 'SRAS', 'Drawn for expected inflation E(&pi;) = <b>' + f(cur.Ee) + '%</b>' + (prev ? ' (' + signed(cur.Ee - prev.Ee) + ')' : '') + lab);
     row('lras', 'LRAS', 'Solow growth rate = <b>' + f(cur.gStar) + '%</b>' + (prev ? ' (' + signed(cur.gStar - prev.gStar) + ')' : ''));
     $('shiftNote').textContent = describeShift(cur, prev, p);
   }
@@ -284,7 +292,13 @@
     if (Math.abs(dS) >= 0.4) parts.push('AD shifted ' + (dS > 0 ? 'right' : 'left') + ' as spending growth ' + (dS > 0 ? 'rose' : 'fell') + ' by ' + f(Math.abs(dS)) + ' points.');
     if (Math.abs(dZ) >= 0.6) parts.push('LRAS shifted ' + (dZ > 0 ? 'right' : 'left') + ': a real shock ' + (dZ > 0 ? 'raised' : 'lowered') + ' the Solow growth rate to ' + f(cur.gStar) + '%.');
     if (Math.abs(dE) >= 0.15) parts.push('SRAS shifted ' + (dE > 0 ? 'up' : 'down') + ' because expected inflation ' + (dE > 0 ? 'rose' : 'fell') + ' to ' + f(cur.Ee) + '%.');
-    if (Math.abs(cur.c) >= 0.8) parts.push('Higher costs pushed SRAS ' + (cur.c > 0 ? 'up' : 'down') + ' this quarter.');
+    if (Math.abs(cur.slack || 0) >= 0.25) {
+      var ug = Math.abs(cur.slack / p.phi);
+      parts.push(cur.slack > 0
+        ? 'Unemployment is ' + f(ug) + ' points below its natural rate, so wages are rising faster than expected: the tight labor market holds SRAS ' + f(cur.slack) + ' points higher.'
+        : 'Unemployment is ' + f(ug) + ' points above its natural rate, so wage growth is slowing: slack holds SRAS ' + f(-cur.slack) + ' points lower.');
+    }
+    if (Math.abs(cur.c) >= 0.8) parts.push((cur.c > 0 ? 'Higher' : 'Lower') + ' costs pushed SRAS ' + (cur.c > 0 ? 'up' : 'down') + ' this quarter.');
     if (!parts.length) parts.push('The curves barely moved this quarter.');
     var gap = cur.g - cur.gStar;
     if (gap > 0.5) parts.push('Growth is above the Solow rate, so inflation is running above expectations.');
@@ -327,7 +341,8 @@
     $('endTitle').textContent = v.title;
     var parts = ['Over your term, inflation averaged ' + f(avg(you, 'pi')) + '% and unemployment ' + f(avg(you, 'u')) + '%.',
       'Your distance from the goals was ' + f(s.dist, 2) + ' points.'];
-    parts.push('Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.');
+    parts.push(p.anchored ? 'Fed credibility started at ' + Math.round(p.cred0 * 100) + '% and ended at ' + Math.round(g.last().cred * 100) + '%.'
+      : 'Expectations were purely adaptive in this game (no anchoring to 2%).');
     if (p.lags !== M.DEFAULTS.lags) parts.push('Policy lags in this game: ' + lagText(p).name.toLowerCase() + '.');
     parts.push(v.ok ? 'The President is pleased and sends your name to the Senate for another term.'
       : 'The President has decided to nominate someone else.');
@@ -431,6 +446,7 @@
       ['u*', p.uStar + '%', 'Natural rate of unemployment'],
       ['r*', p.rStar + '%', 'Neutral real interest rate; neutral funds rate = r* + E(π)'],
       ['κ', p.kappa, 'Slope of SRAS'],
+      ['φ', p.phi, 'SRAS shift per point of unemployment below its natural rate (labor-market pressure)'],
       ['α', p.alpha, 'Effect of the real-rate gap on spending growth'],
       ['ω', p.omega, 'Average share of the rate gap passed through each stage per quarter'],
       ['k', p.lagStages, 'Number of lag stages (policy-lag setting: ' + M.LAG_PRESETS[p.lags].name.toLowerCase() + ')'],
@@ -438,7 +454,7 @@
       ['γ', p.gamma, 'Self-correction of spending when unemployment is high'],
       ['λ', p.lambda, 'Speed of adaptive expectations (per quarter)'],
       ['a', '0 to ' + p.anchor, 'Pull of expectations toward 2%, scaled by credibility'],
-      ['cred\u2080', Math.round(p.cred0 * 100) + '%', 'Credibility at the start of the term (instructor setting)'],
+      ['cred\u2080', p.anchored ? Math.round(p.cred0 * 100) + '%' : 'off', p.anchored ? 'Credibility at the start of the term (instructor setting)' : 'Anchoring switched off: expectations purely adaptive'],
       ['β', p.okun, "Okun's law coefficient"],
       ['θ', p.theta, 'Share of a real shock that changes output per worker, not jobs'],
       ['QE', p.qe ? 'on' : 'off', 'Each QE round works like a ' + (p.qeEff * p.step).toFixed(3) + '-point rate cut']
@@ -467,6 +483,7 @@
     $('setQE').checked = p.qe;
     $('setLags').value = p.lags;
     $('setCred').value = Math.round(p.cred0 * 100);
+    $('setAnchor').checked = p.anchored;
     $('setDemo').checked = !!o2.demo;
     updateShare();
   }
@@ -479,7 +496,8 @@
       gBar: isNaN(parseFloat($('setGbar').value)) ? M.DEFAULTS.gBar : parseFloat($('setGbar').value),
       qe: $('setQE').checked,
       lags: parseInt($('setLags').value, 10),
-      cred0: parseInt($('setCred').value, 10) / 100
+      cred0: parseInt($('setCred').value, 10) / 100,
+      anchored: $('setAnchor').checked
     };
     return {
       scenario: $('setScenario').value,
@@ -500,11 +518,18 @@
     if (o.params.gBar !== M.DEFAULTS.gBar) q.set('gbar', o.params.gBar);
     if (!o.params.qe) q.set('qe', '0');
     if (o.params.lags !== M.DEFAULTS.lags) q.set('lags', o.params.lags);
-    if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    if (!o.params.anchored) q.set('anchor', '0');
+    else if (o.params.cred0 !== M.DEFAULTS.cred0) q.set('cred', Math.round(o.params.cred0 * 100));
+    $('setCred').disabled = !o.params.anchored;
     var cOut = $('credOut'), cb = document.createElement('b');
     cOut.textContent = '';
     cb.textContent = Math.round(o.params.cred0 * 100) + '%. ';
-    cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS)));
+    if (o.params.anchored) { cOut.appendChild(cb); cOut.appendChild(document.createTextNode(credText(o.params.cred0, M.DEFAULTS))); }
+    else {
+      cb.textContent = 'Anchoring off. ';
+      cOut.appendChild(cb);
+      cOut.appendChild(document.createTextNode('Expectations follow past inflation only and are never pulled back toward 2%. Use this to show the economy settling at a new, higher inflation rate on LRAS after a lasting stimulus.'));
+    }
     var lt = lagText(M.mergeParams({ lags: o.params.lags })), out = $('lagOut');
     out.textContent = '';
     var b = document.createElement('b'); b.textContent = lt.name + '. ';

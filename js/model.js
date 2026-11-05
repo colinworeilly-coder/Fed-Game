@@ -13,10 +13,13 @@
  *            lag); w_t = omega, or omega times a random factor when lags
  *            are variable (lagVar > 0).
  *   LRAS  :  gStar_t = gBar + z_t                       (Solow growth rate)
- *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + c_t
+ *   SRAS  :  pi_t = Ee_t + kappa*(g_t - gStar_t) + phi*(uStar - u_{t-1}) + c_t
+ *            (the phi term: a tight labor market keeps pushing wages and
+ *            prices up, so expectations can settle at a new level once
+ *            unemployment is back at its natural rate)
  *   Okun  :  u_t = u_{t-1} - okun*(g_t - gBar - theta*z_t)/4
  *   Expect:  Ee_{t+1} = (1-a_t)*[Ee_t + lambda*(pi_t - Ee_t)] + a_t*piStar,
- *            a_t = anchor * credibility_t
+ *            a_t = anchor * credibility_t (0 when anchoring is switched off)
  *   Cred  :  credibility starts the term at cred0 (the instructor's setting)
  *            and then rises 0.03 a quarter when |pi - piStar| < 1, and falls
  *            0.03*(|pi - piStar| - 1) otherwise.
@@ -40,6 +43,7 @@
     uStar: 4.5,     // natural rate of unemployment, %
     rStar: 2.0,     // neutral real interest rate, %
     kappa: 0.5,     // SRAS slope: extra inflation per point of growth above Solow
+    phi: 0.3,       // SRAS shift per point of unemployment below its natural rate
     alpha: 1.0,     // spending-growth response to the real-rate gap
     lags: 1,        // policy-lag setting, 0 (short) to 4 (long and variable); sets the next three
     omega: 0.5,     // speed at which a rate change reaches spending (per quarter, per stage)
@@ -50,6 +54,7 @@
     theta: 0.5,     // share of a real shock that changes output per worker rather than jobs
     lambda: 0.3,    // adaptive-expectations speed (per quarter)
     anchor: 0.12,   // max pull of expectations toward the goal (at full credibility)
+    anchored: true, // false = expectations purely adaptive (no pull toward 2%)
     cred0: 1.0,     // credibility at the start of the term, 0..1 (held through the pre-game quarters)
     quarters: 16,   // length of the term (4 years)
     history: 6,     // quarters of pre-game history shown on the chart
@@ -232,6 +237,7 @@
     if (over) for (k in over) if (over[k] !== undefined && over[k] !== null) p[k] = over[k];
     // The lag setting fills in omega, lagStages and lagVar unless they were given directly.
     p.lags = Math.max(0, Math.min(LAG_PRESETS.length - 1, Math.round(p.lags)));
+    p.anchored = p.anchored !== false && p.anchored !== 'false' && p.anchored !== 0;
     p.cred0 = clamp(Number(p.cred0), 0, 1);
     if (isNaN(p.cred0)) p.cred0 = DEFAULTS.cred0;
     var pre = LAG_PRESETS[p.lags];
@@ -307,17 +313,19 @@
     var m = input;
     var gStar = p.gBar + sh.z;
     var S = Ee + p.gBar - p.alpha * m + p.gamma * (prev.u - p.uStar) + sh.d;
-    // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + c)
-    var g = (S - Ee - sh.c + p.kappa * gStar) / (1 + p.kappa);
+    // Labor-market pressure on SRAS from last quarter's unemployment gap.
+    var slack = p.phi * (p.uStar - prev.u);
+    // Solve AD (pi = S - g) with SRAS (pi = Ee + kappa*(g - gStar) + slack + c)
+    var g = (S - Ee - sh.c - slack + p.kappa * gStar) / (1 + p.kappa);
     var pi = S - g;
     var u = Math.max(0.5, prev.u - p.okun * (g - p.gBar - p.theta * sh.z) / 4);
     var miss = Math.abs(pi - p.piStar);
     var cred = holdCred ? prev.cred : clamp(prev.cred + (miss < 1 ? 0.03 : -0.03 * (miss - 1)), 0, 1);
-    var a = p.anchor * cred;
+    var a = p.anchored ? p.anchor * cred : 0;
     var EeNext = (1 - a) * (Ee + p.lambda * (pi - Ee)) + a * p.piStar;
     return {
       set: set, i: i, qe: qe, iEff: iEff, m: m, ms: ms, w: w, rgap: rgap, Ee: Ee, EeNext: EeNext, S: S, g: g,
-      gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c
+      gStar: gStar, pi: pi, u: u, cred: cred, r: iEff - Ee, d: sh.d, z: sh.z, c: sh.c, slack: slack
     };
   }
 

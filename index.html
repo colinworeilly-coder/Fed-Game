@@ -175,8 +175,8 @@
       <div class="eq"><span class="eq-name">What sets spending growth</span><code>S = E(&pi;) + g&#772; &minus; &alpha;&middot;m + &gamma;&middot;(u<sub>&minus;1</sub> &minus; u*) + d</code><p>With the real rate at its neutral level, spending grows at expected inflation plus normal growth. A real rate above neutral lowers <i>S</i> (AD shifts left). <i>d</i> collects demand shocks: confidence, wealth, taxes, government spending, exports. The &gamma; term is the economy's slow self-correction.</p></div>
       <div class="eq"><span class="eq-name">Policy lag</span><code>m = (1&minus;&omega;<sub>t</sub>)&middot;m<sub>&minus;1</sub> + &omega;<sub>t</sub>&middot;(i &minus; E(&pi;) &minus; r*)</code><p>The real-rate gap reaches spending gradually, passing through <i>k</i> such stages; more stages give a longer, hump-shaped lag. With variable lags the speed &omega;<sub>t</sub> is random each quarter, so the same move can bite fast or slow. <span id="lagModel"></span></p></div>
       <div class="eq"><span class="eq-name">Long-run aggregate supply</span><code>g* = g&#772; + z</code><p>The Solow growth rate. Real shocks <i>z</i> (oil, technology, taxes, pandemics) move LRAS.</p></div>
-      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate; <i>c</i> captures cost shocks.</p></div>
-      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target.</p></div>
+      <div class="eq"><span class="eq-name">Short-run aggregate supply</span><code>&pi; = E(&pi;) + &kappa;&middot;(g &minus; g*) + &phi;&middot;(u* &minus; u<sub>&minus;1</sub>) + c</code><p>Upward sloping because wages and prices are sticky. Each SRAS curve is drawn for a given expected inflation rate. While unemployment is below its natural rate, workers push for raises to catch up with prices, so SRAS keeps shifting up (the &phi; term); <i>c</i> captures cost shocks.</p></div>
+      <div class="eq"><span class="eq-name">Expectations</span><code>E(&pi;)<sub>+1</sub> = (1&minus;a)&middot;[E(&pi;) + &lambda;&middot;(&pi; &minus; E(&pi;))] + a&middot;2%</code><p>People update expectations toward actual inflation. A credible Fed (high <i>a</i>) keeps them anchored near 2%. Credibility erodes when inflation stays far from target. Instructors can switch anchoring off, making expectations purely adaptive.</p></div>
       <div class="eq"><span class="eq-name">Okun's law</span><code>&Delta;u = &minus;&beta;&middot;(g &minus; g&#772; &minus; &theta;&middot;z) / 4</code><p>Unemployment rises when growth falls short of its normal pace. Part of a real shock changes output per worker rather than jobs.</p></div>
     </div>
     <h3>Parameters</h3>
@@ -218,10 +218,11 @@
         <output id="lagOut" for="setLags"></output>
       </div>
       <div class="range-field">
+        <label class="check-inline" for="setAnchor"><input id="setAnchor" type="checkbox" checked> Anchor expectations to 2% (Fed credibility)</label>
         <label for="setCred">Starting credibility</label>
         <input id="setCred" type="range" min="0" max="100" step="5" value="100" list="credTicks" aria-describedby="credOut">
         <datalist id="credTicks"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist>
-        <div class="range-ends" aria-hidden="true"><span>None: expectations purely adaptive</span><span>Full: anchored at 2%</span></div>
+        <div class="range-ends" aria-hidden="true"><span>0%: no pull toward 2% at first</span><span>100%: anchored at 2%</span></div>
         <output id="credOut" for="setCred"></output>
       </div>
       <label class="check" for="setQE"><input id="setQE" type="checkbox" checked> Allow quantitative easing at a zero funds rate</label>
