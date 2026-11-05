@@ -1,4 +1,4 @@
-# Using the Fed Game in class
+# Using Long and Variable in class
 
 These activities assume students have seen the AD–AS model (C&T ch. 13) and
 are starting, or have finished, the chapters on the Fed and monetary policy

@@ -1,5 +1,5 @@
 /*
- * Fed Game: SVG charts (no libraries)
+ * Long and Variable: SVG charts (no libraries)
  *   FedCharts.timeSeries  - inflation, unemployment and the funds rate by quarter
  *   FedCharts.adas        - the Cowen-Tabarrok AD-AS diagram for the current quarter
  *   FedCharts.compare     - small multiples for the end-of-game comparison

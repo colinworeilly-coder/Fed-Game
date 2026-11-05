@@ -1,5 +1,5 @@
 /*
- * Fed Game: user interface
+ * Long and Variable: user interface
  */
 (function () {
   'use strict';
@@ -186,6 +186,12 @@
     sub.textContent = txt;
     sub.className = 'rate-sub' + (d > 1e-9 ? ' up' : d < -1e-9 ? ' down' : '');
     var done = g.done();
+    // Zero lower bound: the next cut is QE, so flag the button (and the
+    // readout once QE is selected) in red.
+    var atZlb = p.qe && s <= 0 && !done;
+    $('btnCut').classList.toggle('qe', atZlb);
+    $('btnCut').title = atZlb ? 'The funds rate is at zero. Pressing this adds a round of quantitative easing.' : '';
+    out.parentNode.classList.toggle('qe', s < 0);
     $('btnGo').disabled = done || !!state.demoTimer;
     $('btnCut').disabled = done || s <= (p.qe ? -p.qeMax : 0);
     $('btnRaise').disabled = done || s >= p.iMax;
@@ -409,7 +415,7 @@
     var csv = tableRows().map(function (r) { return r.map(function (c) { return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'fed-game-' + state.game.seed + '.csv';
+    a.download = 'long-and-variable-' + state.game.seed + '.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     $('copyMsg').textContent = 'If no download started, use Copy table instead.';
     setTimeout(function () { $('copyMsg').textContent = ''; }, 4000);
@@ -572,7 +578,7 @@
   newGame(opts);
   if (!opts.demo) {
     var seen = false;
-    try { seen = sessionStorage.getItem('fedgame-help') === '1'; sessionStorage.setItem('fedgame-help', '1'); } catch (e) { seen = false; }
+    try { seen = sessionStorage.getItem('lav-help') === '1'; sessionStorage.setItem('lav-help', '1'); } catch (e) { seen = false; }
     if (!seen) $('dlgHelp').showModal();
   }
 })();

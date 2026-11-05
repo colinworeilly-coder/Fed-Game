@@ -3,7 +3,7 @@
  * Bundle the game into one self-contained HTML file (CSS and JS inlined),
  * handy for e-mailing to students or uploading to a course site.
  *
- *   node tools/build.js                 -> dist/fed-game.html
+ *   node tools/build.js                 -> dist/long-and-variable.html
  *   node tools/build.js --fragment out  -> also writes a head/body fragment
  */
 'use strict';
@@ -25,8 +25,8 @@ function inline(src) {
 
 var out = inline(html);
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-fs.writeFileSync(path.join(root, 'dist', 'fed-game.html'), out);
-console.log('wrote dist/fed-game.html (' + Math.round(out.length / 1024) + ' KB)');
+fs.writeFileSync(path.join(root, 'dist', 'long-and-variable.html'), out);
+console.log('wrote dist/long-and-variable.html (' + Math.round(out.length / 1024) + ' KB)');
 
 var i = process.argv.indexOf('--fragment');
 if (i > -1 && process.argv[i + 1]) {

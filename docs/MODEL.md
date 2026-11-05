@@ -1,4 +1,4 @@
-# The model behind the Fed Game
+# The model behind Long and Variable
 
 The game runs a quarterly, discrete-time version of the dynamic AD–AS model in
 Cowen & Tabarrok, *Modern Principles of Economics* (4th ed.):

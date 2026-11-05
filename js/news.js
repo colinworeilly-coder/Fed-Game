@@ -1,5 +1,5 @@
 /*
- * Fed Game: news headlines
+ * Long and Variable: news headlines
  * Each quarter the game prints a headline. When a shock first hits (and
  * for two quarters after) the headline describes it, without naming the
  * shock's category. Otherwise the headline reports the data.

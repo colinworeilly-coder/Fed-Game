@@ -1,5 +1,5 @@
 /*
- * Fed Game: model engine
+ * Long and Variable: model engine
  * ----------------------
  * A quarterly version of the dynamic AD-AS model in Cowen & Tabarrok,
  * Modern Principles of Economics, ch. 13 (32), 15 (34) and 16 (35).

@@ -1,5 +1,5 @@
 {
-  "name": "fed-game",
+  "name": "long-and-variable",
   "version": "1.0.0",
   "description": "A classroom monetary policy game built on the Cowen-Tabarrok dynamic AD-AS model.",
   "private": true,

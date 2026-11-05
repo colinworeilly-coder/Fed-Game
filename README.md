@@ -1,9 +1,11 @@
-# The Fed Game
+# Long and Variable: A Monetary Policy Game
 
-A classroom monetary policy game. You chair the Fed for one four-year term. Each
-quarter you set the federal funds rate and try to keep inflation near 2% and
-unemployment near its natural rate while the economy is hit by a shock you have
-to diagnose from the news and the data.
+A classroom monetary policy game. You chair the Fed for one four-year term.
+Each quarter you set the federal funds rate and try to keep inflation near 2%
+and unemployment near its natural rate while the economy is hit by a shock you
+have to diagnose from the news and the data. The name comes from Milton
+Friedman's observation that monetary policy works with "long and variable
+lags."
 
 Behind the game is a quarterly version of the dynamic AD–AS model in Cowen &
 Tabarrok, *Modern Principles of Economics* (ch. 13, 15, 16; macro ch. 32, 34,
@@ -35,7 +37,7 @@ No build step and no dependencies. Either:
 
 * open `index.html` in a browser, or
 * serve the folder (for example with GitHub Pages) and share the link, or
-* run `npm run build` and hand out the single file `dist/fed-game.html`.
+* run `npm run build` and hand out the single file `dist/long-and-variable.html`.
 
 ## For instructors
 
@@ -53,7 +55,7 @@ No build step and no dependencies. Either:
 
 ```
 npm test        # model tests (Node 18+)
-npm run build   # writes dist/fed-game.html
+npm run build   # writes dist/long-and-variable.html
 ```
 
 | File | Contents |

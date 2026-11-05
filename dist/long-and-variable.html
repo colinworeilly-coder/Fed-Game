@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- build:head -->
-<title>The Fed Game</title>
+<title>Long and Variable: A Monetary Policy Game</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Set the federal funds rate each quarter and try to keep inflation and unemployment on target. A classroom monetary policy game built on the Cowen-Tabarrok AD-AS model.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +39,9 @@
   --warn: #fab219;
   --warn-ink: #8a5a00;
   --crit: #d03b3b;
+  --zlb-ink: #c0352f;
+  --zlb-soft: rgba(208, 59, 59, 0.08);
+  --zlb-soft-2: rgba(208, 59, 59, 0.15);
   --shadow: 0 1px 2px rgba(19, 32, 26, 0.06), 0 4px 16px rgba(19, 32, 26, 0.05);
   --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-news: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
@@ -72,6 +75,9 @@
     --sras: #199e70;
     --good-ink: #39c06a;
     --warn-ink: #f2bb4a;
+    --zlb-ink: #f08a84;
+    --zlb-soft: rgba(240, 138, 132, 0.10);
+    --zlb-soft-2: rgba(240, 138, 132, 0.18);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     color-scheme: dark;
   }
@@ -97,6 +103,9 @@
   --sras: #199e70;
   --good-ink: #39c06a;
   --warn-ink: #f2bb4a;
+  --zlb-ink: #f08a84;
+  --zlb-soft: rgba(240, 138, 132, 0.10);
+  --zlb-soft-2: rgba(240, 138, 132, 0.18);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
@@ -297,6 +306,13 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .rate-sub { font-size: var(--fs-s); color: var(--ink-2); min-height: 1.5em; }
 .rate-sub.up { color: var(--pi); }
 .rate-sub.down { color: var(--u); }
+/* At the zero lower bound the cut button becomes QE and turns red; while QE
+   is selected the rate readout is red too. */
+.rate-btn.qe { border-color: var(--zlb-ink); background: var(--zlb-soft); color: var(--zlb-ink); }
+.rate-btn.qe small { color: var(--zlb-ink); }
+.rate-btn.qe:hover { border-color: var(--zlb-ink); background: var(--zlb-soft-2); }
+.rate-readout.qe output, .rate-readout.qe .rate-sub { color: var(--zlb-ink); }
+.name-note { border-top: 1px solid var(--line); padding-top: 12px; }
 .go { padding: 12px 14px; font-size: var(--fs-m); }
 .hint { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
 
@@ -442,7 +458,6 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 @media (max-width: 560px) {
   .topbar { grid-template-columns: 1fr; }
   .topnav { justify-content: flex-start; }
-  .brand-sub { display: none; }
   .dlg-body { padding: 18px 16px; }
   .rate-readout output { font-size: 2rem; }
   .news { padding: 10px 12px; }
@@ -463,8 +478,8 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         <svg viewBox="0 0 32 32" width="28" height="28"><circle cx="16" cy="16" r="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 21 L12 15 L17 18 L26 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
       <div>
-        <h1 class="brand-name">The Fed Game</h1>
-        <p class="brand-sub">You chair the Fed for one four-year term.</p>
+        <h1 class="brand-name">Long and Variable</h1>
+        <p class="brand-sub">A Monetary Policy Game</p>
       </div>
     </div>
     <div class="term" aria-live="polite">
@@ -598,6 +613,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
         <p>Spending responds to the <b>real</b> rate: the funds rate minus expected inflation. If inflation expectations rise and you leave the funds rate alone, policy gets looser. The neutral funds rate is about <b class="neutralI">4%</b> when expected inflation is 2%.</p>
       </div>
     </div>
+    <p class="small name-note">You chair the Fed for one four-year term. The game's name comes from Milton Friedman, who warned that monetary policy works with &ldquo;long and variable lags.&rdquo;</p>
     <div class="dlg-actions">
       <button class="btn primary" value="start" id="btnStart">Take office</button>
     </div>
@@ -712,7 +728,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 
 <script>
 /*
- * Fed Game: model engine
+ * Long and Variable: model engine
  * ----------------------
  * A quarterly version of the dynamic AD-AS model in Cowen & Tabarrok,
  * Modern Principles of Economics, ch. 13 (32), 15 (34) and 16 (35).
@@ -1132,7 +1148,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 </script>
 <script>
 /*
- * Fed Game: news headlines
+ * Long and Variable: news headlines
  * Each quarter the game prints a headline. When a shock first hits (and
  * for two quarters after) the headline describes it, without naming the
  * shock's category. Otherwise the headline reports the data.
@@ -1267,7 +1283,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 </script>
 <script>
 /*
- * Fed Game: SVG charts (no libraries)
+ * Long and Variable: SVG charts (no libraries)
  *   FedCharts.timeSeries  - inflation, unemployment and the funds rate by quarter
  *   FedCharts.adas        - the Cowen-Tabarrok AD-AS diagram for the current quarter
  *   FedCharts.compare     - small multiples for the end-of-game comparison
@@ -1571,7 +1587,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 </script>
 <script>
 /*
- * Fed Game: user interface
+ * Long and Variable: user interface
  */
 (function () {
   'use strict';
@@ -1758,6 +1774,12 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     sub.textContent = txt;
     sub.className = 'rate-sub' + (d > 1e-9 ? ' up' : d < -1e-9 ? ' down' : '');
     var done = g.done();
+    // Zero lower bound: the next cut is QE, so flag the button (and the
+    // readout once QE is selected) in red.
+    var atZlb = p.qe && s <= 0 && !done;
+    $('btnCut').classList.toggle('qe', atZlb);
+    $('btnCut').title = atZlb ? 'The funds rate is at zero. Pressing this adds a round of quantitative easing.' : '';
+    out.parentNode.classList.toggle('qe', s < 0);
     $('btnGo').disabled = done || !!state.demoTimer;
     $('btnCut').disabled = done || s <= (p.qe ? -p.qeMax : 0);
     $('btnRaise').disabled = done || s >= p.iMax;
@@ -1981,7 +2003,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
     var csv = tableRows().map(function (r) { return r.map(function (c) { return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'fed-game-' + state.game.seed + '.csv';
+    a.download = 'long-and-variable-' + state.game.seed + '.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     $('copyMsg').textContent = 'If no download started, use Copy table instead.';
     setTimeout(function () { $('copyMsg').textContent = ''; }, 4000);
@@ -2144,7 +2166,7 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
   newGame(opts);
   if (!opts.demo) {
     var seen = false;
-    try { seen = sessionStorage.getItem('fedgame-help') === '1'; sessionStorage.setItem('fedgame-help', '1'); } catch (e) { seen = false; }
+    try { seen = sessionStorage.getItem('lav-help') === '1'; sessionStorage.setItem('lav-help', '1'); } catch (e) { seen = false; }
     if (!seen) $('dlgHelp').showModal();
   }
 })();

@@ -26,6 +26,9 @@
   --warn: #fab219;
   --warn-ink: #8a5a00;
   --crit: #d03b3b;
+  --zlb-ink: #c0352f;
+  --zlb-soft: rgba(208, 59, 59, 0.08);
+  --zlb-soft-2: rgba(208, 59, 59, 0.15);
   --shadow: 0 1px 2px rgba(19, 32, 26, 0.06), 0 4px 16px rgba(19, 32, 26, 0.05);
   --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-news: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
@@ -59,6 +62,9 @@
     --sras: #199e70;
     --good-ink: #39c06a;
     --warn-ink: #f2bb4a;
+    --zlb-ink: #f08a84;
+    --zlb-soft: rgba(240, 138, 132, 0.10);
+    --zlb-soft-2: rgba(240, 138, 132, 0.18);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     color-scheme: dark;
   }
@@ -84,6 +90,9 @@
   --sras: #199e70;
   --good-ink: #39c06a;
   --warn-ink: #f2bb4a;
+  --zlb-ink: #f08a84;
+  --zlb-soft: rgba(240, 138, 132, 0.10);
+  --zlb-soft-2: rgba(240, 138, 132, 0.18);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
@@ -284,6 +293,13 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .rate-sub { font-size: var(--fs-s); color: var(--ink-2); min-height: 1.5em; }
 .rate-sub.up { color: var(--pi); }
 .rate-sub.down { color: var(--u); }
+/* At the zero lower bound the cut button becomes QE and turns red; while QE
+   is selected the rate readout is red too. */
+.rate-btn.qe { border-color: var(--zlb-ink); background: var(--zlb-soft); color: var(--zlb-ink); }
+.rate-btn.qe small { color: var(--zlb-ink); }
+.rate-btn.qe:hover { border-color: var(--zlb-ink); background: var(--zlb-soft-2); }
+.rate-readout.qe output, .rate-readout.qe .rate-sub { color: var(--zlb-ink); }
+.name-note { border-top: 1px solid var(--line); padding-top: 12px; }
 .go { padding: 12px 14px; font-size: var(--fs-m); }
 .hint { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
 
@@ -429,7 +445,6 @@ table.params td:last-child { text-align: left; white-space: normal; color: var(-
 @media (max-width: 560px) {
   .topbar { grid-template-columns: 1fr; }
   .topnav { justify-content: flex-start; }
-  .brand-sub { display: none; }
   .dlg-body { padding: 18px 16px; }
   .rate-readout output { font-size: 2rem; }
   .news { padding: 10px 12px; }
